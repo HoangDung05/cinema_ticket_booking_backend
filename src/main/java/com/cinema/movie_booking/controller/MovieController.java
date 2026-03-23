@@ -45,7 +45,7 @@ public class MovieController {
     @PostMapping
     public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
         Movie savedMovie = movieService.saveMovie(movie);
-        return new ResponseEntity<>(savedMovie, HttpStatus.CREATED); // Trả về mã 201 Created
+        return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
     }
 
     // 4. API CẬP NHẬT PHIM (PUT)
