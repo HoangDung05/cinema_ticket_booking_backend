@@ -21,7 +21,7 @@ public class MovieController {
         this.movieService = movieService;
     }
 
-    // 1. API LẤY DANH SÁCH & LỌC (GET)
+    // 1. API LẤY DANH SÁCH & LỌC
 
     @GetMapping
     public ResponseEntity<List<Movie>> getAllOrFilterMovies(
@@ -32,7 +32,7 @@ public class MovieController {
         return ResponseEntity.ok(movies);
     }
 
-    // 2. API LẤY CHI TIẾT 1 PHIM THEO ID (GET)
+    // 2. API LẤY CHI TIẾT 1 PHIM THEO ID
 
     @GetMapping("/{id}")
     public ResponseEntity<Movie> getMovieById(@PathVariable Integer id) {
@@ -40,7 +40,7 @@ public class MovieController {
         return ResponseEntity.ok(movie);
     }
 
-    // 3. API THÊM PHIM MỚI (POST)
+    // 3. API THÊM PHIM MỚI
 
     @PostMapping
     public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
@@ -48,7 +48,7 @@ public class MovieController {
         return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
     }
 
-    // 4. API CẬP NHẬT PHIM (PUT)
+    // 4. API CẬP NHẬT PHIM
 
     @PutMapping("/{id}")
     public ResponseEntity<Movie> updateMovie(@PathVariable Integer id, @RequestBody Movie movieDetails) {
@@ -67,7 +67,7 @@ public class MovieController {
         return ResponseEntity.ok(updatedMovie);
     }
 
-    // 5. API XÓA PHIM (DELETE)
+    // 5. API XÓA PHIM
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteMovie(@PathVariable Integer id) {
