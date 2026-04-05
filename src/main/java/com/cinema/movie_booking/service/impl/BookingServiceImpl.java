@@ -82,4 +82,35 @@ public class BookingServiceImpl {
                 totalAmount
         );
     }
+
+    @Transactional(readOnly = true)
+    public List<com.cinema.movie_booking.dto.BookingHistoryDTO> getUserBookings(Integer userId) {
+        List<Booking> bookings = bookingRepository.findByUserId(userId);
+        List<com.cinema.movie_booking.dto.BookingHistoryDTO> result = new ArrayList<>();
+
+        for (Booking b : bookings) {
+            String movieTitle = b.getShowtime().getMovie().getTitle();
+            String cinemaName = b.getShowtime().getRoom().getCinema().getName(); // Assuming Room has Cinema
+            
+            // Lấy danh sách tên ghế từ BookingDetail
+            List<BookingDetail> details = bookingDetailRepository.findByBookingId(b.getId());
+            List<String> seatNames = new ArrayList<>();
+            for (BookingDetail bd : details) {
+                seatNames.add(bd.getSeat().getSeatNumber());
+            }
+            String seatsStr = String.join(", ", seatNames);
+
+            result.add(new com.cinema.movie_booking.dto.BookingHistoryDTO(
+                    b.getId(),
+                    movieTitle,
+                    cinemaName,
+                    b.getShowtime().getStartTime(),
+                    b.getTotalPrice(),
+                    b.getStatus(),
+                    seatsStr
+            ));
+        }
+
+        return result;
+    }
 }

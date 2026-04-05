@@ -29,4 +29,14 @@ public class BookingController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // API Lấy lịch sử đặt vé của User: GET http://localhost:8080/api/bookings/user/{userId}
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<?> getUserBookingHistory(@PathVariable Integer userId) {
+        try {
+            return ResponseEntity.ok(bookingService.getUserBookings(userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi khi lấy lịch sử đặt vé: " + e.getMessage());
+        }
+    }
 }
