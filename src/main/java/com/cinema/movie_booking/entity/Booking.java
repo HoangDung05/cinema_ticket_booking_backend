@@ -40,4 +40,11 @@ public class Booking {
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<BookingDetail> bookingDetails;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voucher_id")
+    private Voucher voucher;
+
+    @Column(name = "discount_amount")
+    private BigDecimal discountAmount = BigDecimal.ZERO;
 }
