@@ -2,7 +2,12 @@ package com.cinema.movie_booking.controller;
 
 import com.cinema.movie_booking.entity.Movie;
 import com.cinema.movie_booking.entity.MovieStatus;
+import com.cinema.movie_booking.entity.Showtime;
 import com.cinema.movie_booking.service.MovieService;
+import com.cinema.movie_booking.service.ShowtimeService;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,13 +18,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/movies")
+@RequiredArgsConstructor
 public class MovieController {
 
     private final MovieService movieService;
-
-    public MovieController(MovieService movieService) {
-        this.movieService = movieService;
-    }
+    private final ShowtimeService showtimeService;
 
     // 1. API LẤY DANH SÁCH & LỌC (GET)
 
@@ -40,38 +43,22 @@ public class MovieController {
         return ResponseEntity.ok(movie);
     }
 
-    // 3. API THÊM PHIM MỚI (POST)
-
-    @PostMapping
-    public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
-        Movie savedMovie = movieService.saveMovie(movie);
-        return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
+    // 3. Lấy phim đang chiếu
+    @GetMapping("/now-showing")
+    public ResponseEntity<List<Movie>> getNowShowing() {
+        return ResponseEntity.ok(movieService.getNowShowingMovies());
     }
 
-    // 4. API CẬP NHẬT PHIM (PUT)
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Movie> updateMovie(@PathVariable Integer id, @RequestBody Movie movieDetails) {
-
-        Movie existingMovie = movieService.getMovieById(id);
-
-        existingMovie.setTitle(movieDetails.getTitle());
-        existingMovie.setDescription(movieDetails.getDescription());
-        existingMovie.setDuration(movieDetails.getDuration());
-        existingMovie.setReleaseDate(movieDetails.getReleaseDate());
-        existingMovie.setPosterUrl(movieDetails.getPosterUrl());
-        existingMovie.setTrailerUrl(movieDetails.getTrailerUrl());
-        existingMovie.setStatus(movieDetails.getStatus());
-
-        Movie updatedMovie = movieService.saveMovie(existingMovie);
-        return ResponseEntity.ok(updatedMovie);
+    // 4. Lấy phim sắp chiếu
+    @GetMapping("/coming-soon")
+    public ResponseEntity<List<Movie>> getComingSoon() {
+        return ResponseEntity.ok(movieService.getComingSoonMovies());
     }
 
-    // 5. API XÓA PHIM (DELETE)
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteMovie(@PathVariable Integer id) {
-        movieService.deleteMovie(id);
-        return ResponseEntity.ok("Xóa phim thành công!");
+    // Lấy các suất chiếu của một bộ phim cụ thể (Để vẽ bảng chọn giờ cho khách)
+    @GetMapping("/{movieId}/showtimes")
+    public ResponseEntity<List<Showtime>> getShowtimesByMovie(@PathVariable Integer movieId) {
+        List<Showtime> showtimes = showtimeService.getShowtimesByMovieId(movieId);
+        return ResponseEntity.ok(showtimes);
     }
 }

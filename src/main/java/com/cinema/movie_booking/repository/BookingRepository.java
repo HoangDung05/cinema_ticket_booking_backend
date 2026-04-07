@@ -7,6 +7,12 @@ import java.util.List;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
-    // Lấy lịch sử đặt vé của 1 khách hàng
+    // Lấy đơn hàng theo User (cho khách xem lịch sử)
     List<Booking> findByUserId(Integer userId);
+
+    // Lấy toàn bộ đơn hàng, mới nhất lên đầu (cho Admin đối soát)
+    List<Booking> findAllByOrderByCreatedAtDesc();
+
+    // Tìm đơn hàng theo trạng thái để tính doanh thu
+    List<Booking> findByStatus(String status);
 }

@@ -1,13 +1,10 @@
 package com.cinema.movie_booking.service.impl;
 
 import java.util.List;
-
 import org.springframework.stereotype.Service;
-
 import com.cinema.movie_booking.entity.User;
 import com.cinema.movie_booking.repository.UserRepository;
 import com.cinema.movie_booking.service.UserService;
-
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -17,21 +14,100 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
     @Override
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    @Override
     public List<User> getAllCustomers() {
+        // Tận dụng hàm findByRoleName bạn đã có trong Repo
         return userRepository.findByRoleName("CUSTOMER");
     }
 
     @Override
     public User getById(Integer id) {
-        return userRepository.findById(id).orElse(null);
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại với ID: " + id));
     }
 
     @Override
-    public User updateProfile(Integer id, User updatedUser) {
-        User existing = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        existing.setFullName(updatedUser.getFullName());
-        existing.setPhone(updatedUser.getPhone());
-        return userRepository.save(existing);
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với Email: " + email));
     }
+
+    /**
+     * Hàm Update dùng chung cho cả Admin và User
+     * 
+     * @param identifier: Có thể là ID (Integer) hoặc Email (String)
+     * @param isEmail:    Nếu true thì tìm theo email, false thì tìm theo ID
+     */
+    @Override
+    public User updateProfile(String email, User userDetails, boolean isSelfUpdate) {
+        // 1. Tìm người dùng hiện tại trong DB dựa trên email gốc
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+
+        // 2. CẬP NHẬT CÁC TRƯỜNG CHUNG (Cả User và Admin đều sửa được)
+        user.setFullName(userDetails.getFullName());
+        user.setPhone(userDetails.getPhone());
+
+        // 3. KHÔNG CHO PHÉP SỬA EMAIL
+
+        // 4. KIỂM TRA QUYỀN HẠN (Dựa vào biến isSelfUpdate)
+        if (isSelfUpdate) {
+
+            System.out.println("User " + email + " đang tự cập nhật thông tin cá nhân.");
+        } else {
+
+            if (userDetails.getStatus() != null) {
+                user.setStatus(userDetails.getStatus());
+            }
+
+            System.out.println("Admin đang cập nhật thông tin cho User: " + email);
+        }
+
+        // 5. Lưu lại vào Database
+        return userRepository.save(user);
+    }
+
+    @Override
+    public void deleteUser(Integer id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("Không thể xóa vì User không tồn tại");
+        }
+        userRepository.deleteById(id);
+    }
+
+    @Override
+    public User updateUserStatus(Integer id, String newStatus) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy User ID: " + id));
+
+        // Chuẩn hóa chuỗi (Viết hoa hết cho chắc)
+        String status = newStatus.toUpperCase();
+
+        if (status.equals("ACTIVE") || status.equals("LOCKED")) {
+            user.setStatus(status);
+        } else {
+            throw new RuntimeException("Trạng thái không hợp lệ! Chỉ được dùng ACTIVE hoặc LOCKED");
+        }
+
+        return userRepository.save(user);
+    }
+
+    @Override
+    public User updateUser(Integer id, User userDetails) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy User ID: " + id));
+
+        // Chỉ cập nhật những trường cần thiết
+        user.setFullName(userDetails.getFullName());
+        user.setPhone(userDetails.getPhone());
+        // Không nên cho sửa email ở đây vì email là unique, nếu muốn sửa phải check
+        // trùng
+
+        return userRepository.save(user);
+    }
+
 }

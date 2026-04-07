@@ -1,5 +1,6 @@
 package com.cinema.movie_booking.service.impl;
 
+import com.cinema.movie_booking.dto.AdminStatsDTO;
 import com.cinema.movie_booking.dto.BookingRequest;
 import com.cinema.movie_booking.dto.BookingResponse;
 import com.cinema.movie_booking.entity.*;
@@ -120,5 +121,31 @@ public class BookingServiceImpl implements BookingService {
     public Booking getBookingById(Integer id) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getBookingById'");
+    }
+
+    @Override
+    public List<Booking> getAllBookingsForAdmin() {
+        return bookingRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    @Override
+    public AdminStatsDTO getAdminStats() {
+        // Chỉ tính doanh thu từ những đơn đã thanh toán (PAID)
+        List<Booking> paidBookings = bookingRepository.findByStatus("PAID");
+
+        // 1. Tính tổng doanh thu
+        BigDecimal totalRevenue = paidBookings.stream()
+                .map(Booking::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 2. Tính tổng số vé (Cộng dồn số lượng ghế trong mỗi đơn PAID)
+        long totalTickets = paidBookings.stream()
+                .mapToLong(b -> b.getBookingDetails().size())
+                .sum();
+
+        // 3. Tính tổng số khách hàng
+        long totalCustomers = userRepository.count();
+
+        return new AdminStatsDTO(totalRevenue, totalTickets, totalCustomers);
     }
 }
