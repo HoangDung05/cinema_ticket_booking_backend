@@ -4,113 +4,121 @@ import com.cinema.movie_booking.dto.BookingRequest;
 import com.cinema.movie_booking.dto.BookingResponse;
 import com.cinema.movie_booking.entity.*;
 import com.cinema.movie_booking.repository.*;
+import com.cinema.movie_booking.service.BookingService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor // Tự động Inject các Repository mà không cần @Autowired
-public class BookingServiceImpl {
+@RequiredArgsConstructor
+public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final BookingDetailRepository bookingDetailRepository;
-    private final SeatRepository seatRepository;
     private final ShowtimeRepository showtimeRepository;
+    private final VoucherRepository voucherRepository;
     private final UserRepository userRepository;
+    private final SeatRepository seatRepository;
 
-    @Transactional(rollbackFor = Exception.class)
-    public BookingResponse createBooking(BookingRequest request) throws Exception {
-
-        // BƯỚC 1: Lấy thông tin User và Showtime từ Database (Kiểm tra xem có tồn tại không)
+    @Override
+    @Transactional
+    public BookingResponse createBooking(BookingRequest request) {
+        // 1. Tìm thông tin cơ bản
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new Exception("Không tìm thấy thông tin người dùng!"));
-
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
         Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
-                .orElseThrow(() -> new Exception("Không tìm thấy thông tin suất chiếu!"));
+                .orElseThrow(() -> new RuntimeException("Suất chiếu không tồn tại"));
 
-        // BƯỚC 2: CHECK TRÙNG GHẾ
-        // Dùng hàm có sẵn của Spring Data JPA để đếm xem có ghế nào trong danh sách đã bị đặt chưa
-        boolean isSeatTaken = bookingDetailRepository.existsByShowtimeIdAndSeatIdIn(
-                request.getShowtimeId(),
-                request.getSeatIds()
-        );
-
-        if (isSeatTaken) {
-            throw new Exception("Ghế bạn chọn đã có người đặt. Vui lòng chọn ghế khác!");
+        // 2. Check trùng ghế ngay lập tức
+        for (Integer seatId : request.getSeatIds()) {
+            if (bookingDetailRepository.existsByShowtimeIdAndSeatId(request.getShowtimeId(), seatId)) {
+                throw new RuntimeException("Ghế ID " + seatId + " đã bị đặt trước đó!");
+            }
         }
 
-        // BƯỚC 3: TÍNH TỔNG TIỀN
-        // Dựa vào SQL của bạn, giá vé nằm ở bảng Showtime.
-        BigDecimal ticketPrice = showtime.getPrice();
-        // Tổng tiền = Giá vé * Số lượng ghế chọn
-        BigDecimal totalAmount = ticketPrice.multiply(new BigDecimal(request.getSeatIds().size()));
+        // 3. Tính toán tiền bạc
+        BigDecimal basePrice = showtime.getPrice().multiply(new BigDecimal(request.getSeatIds().size()));
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Voucher voucher = null;
 
-        // BƯỚC 4: TẠO BOOKING (Đơn hàng tổng)
-        Booking newBooking = new Booking();
-        newBooking.setUser(user); // Truyền vào cả Object User
-        newBooking.setShowtime(showtime); // Truyền vào cả Object Showtime
-        newBooking.setTotalPrice(totalAmount);
-        newBooking.setStatus("PENDING"); // Để PENDING chờ thanh toán
+        // 4. Logic Voucher
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isEmpty()) {
+            voucher = voucherRepository.findByCode(request.getVoucherCode())
+                    .orElseThrow(() -> new RuntimeException("Mã voucher không hợp lệ"));
 
-        Booking savedBooking = bookingRepository.save(newBooking);
+            // Check hạn dùng (giả định)
+            if (LocalDateTime.now().isAfter(voucher.getEndDate())) {
+                throw new RuntimeException("Voucher đã hết hạn");
+            }
 
-        // BƯỚC 5: TẠO CHI TIẾT BOOKING (Từng ghế một)
-        List<BookingDetail> details = new ArrayList<>();
+            discountAmount = calculateDiscount(voucher, basePrice);
+            voucher.setUsedCount(voucher.getUsedCount() + 1);
+            voucherRepository.save(voucher);
+        }
 
+        // 5. Lưu Booking chính
+        Booking booking = new Booking();
+        booking.setUser(user);
+        booking.setShowtime(showtime);
+        booking.setTotalPrice(basePrice.subtract(discountAmount));
+        booking.setDiscountAmount(discountAmount);
+        booking.setVoucher(voucher);
+        booking.setStatus("PENDING");
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // 6. Lưu BookingDetail (Danh sách ghế)
         for (Integer seatId : request.getSeatIds()) {
             Seat seat = seatRepository.findById(seatId)
-                    .orElseThrow(() -> new Exception("Không tìm thấy ghế có ID: " + seatId));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy ghế"));
 
             BookingDetail detail = new BookingDetail();
             detail.setBooking(savedBooking);
             detail.setShowtime(showtime);
             detail.setSeat(seat);
-            detail.setPriceAtBooking(ticketPrice); // Lưu lại giá vé tại thời điểm đặt để đối soát sau này
-
-            details.add(detail);
+            detail.setPriceAtBooking(showtime.getPrice());
+            bookingDetailRepository.save(detail);
         }
 
-        // Lưu danh sách chi tiết vé vào DB cùng lúc
-        bookingDetailRepository.saveAll(details);
-        return new BookingResponse(
-                savedBooking.getId(),
-                "Đặt vé thành công! Vui lòng tiến hành thanh toán.",
-                totalAmount
-        );
+        return new BookingResponse(savedBooking.getId(), savedBooking.getTotalPrice(),
+                savedBooking.getDiscountAmount(), savedBooking.getStatus());
     }
 
-    @Transactional(readOnly = true)
-    public List<com.cinema.movie_booking.dto.BookingHistoryDTO> getUserBookings(Integer userId) {
-        List<Booking> bookings = bookingRepository.findByUserId(userId);
-        List<com.cinema.movie_booking.dto.BookingHistoryDTO> result = new ArrayList<>();
+    @Override
+    public List<BookingResponse> getUserBookings(Integer userId) {
+        return bookingRepository.findByUserId(userId).stream()
+                .map(b -> new BookingResponse(b.getId(), b.getTotalPrice(), b.getDiscountAmount(), b.getStatus()))
+                .collect(Collectors.toList());
+    }
 
-        for (Booking b : bookings) {
-            String movieTitle = b.getShowtime().getMovie().getTitle();
-            String cinemaName = b.getShowtime().getRoom().getCinema().getName(); // Assuming Room has Cinema
-            
-            // Lấy danh sách tên ghế từ BookingDetail
-            List<BookingDetail> details = bookingDetailRepository.findByBookingId(b.getId());
-            List<String> seatNames = new ArrayList<>();
-            for (BookingDetail bd : details) {
-                seatNames.add(bd.getSeat().getSeatNumber());
-            }
-            String seatsStr = String.join(", ", seatNames);
-
-            result.add(new com.cinema.movie_booking.dto.BookingHistoryDTO(
-                    b.getId(),
-                    movieTitle,
-                    cinemaName,
-                    b.getShowtime().getStartTime(),
-                    b.getTotalPrice(),
-                    b.getStatus(),
-                    seatsStr
-            ));
+    private BigDecimal calculateDiscount(Voucher v, BigDecimal amount) {
+        if ("PERCENT".equals(v.getDiscountType())) {
+            return amount.multiply(v.getDiscountValue()).divide(new BigDecimal(100));
         }
+        return v.getDiscountValue();
+    }
 
-        return result;
+    @Override
+    public Booking createBooking(Integer userId, Integer showtimeId, List<Integer> seatIds, String voucherCode) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'createBooking'");
+    }
+
+    @Override
+    public List<Booking> getHistoryByUserId(Integer userId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getHistoryByUserId'");
+    }
+
+    @Override
+    public Booking getBookingById(Integer id) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getBookingById'");
     }
 }

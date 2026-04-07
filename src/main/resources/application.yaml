@@ -11,7 +11,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/cinema_booking?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root          # Thay bằng username MySQL của bạn
-    password: "root" # Thay bằng mật khẩu MySQL của bạn
+    password: "admin" # Thay bằng mật khẩu MySQL của bạn
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # Cấu hình Hibernate / JPA (Spring Boot 4 tối ưu hóa Hibernate 6+)
