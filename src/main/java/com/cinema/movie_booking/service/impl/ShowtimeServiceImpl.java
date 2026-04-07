@@ -1,19 +1,29 @@
 package com.cinema.movie_booking.service.impl;
 
+import com.cinema.movie_booking.dto.SeatStatusDTO;
+import com.cinema.movie_booking.dto.ShowtimeDTO;
+import com.cinema.movie_booking.entity.Seat;
 import com.cinema.movie_booking.entity.Showtime;
+import com.cinema.movie_booking.repository.BookingDetailRepository;
+import com.cinema.movie_booking.repository.SeatRepository;
 import com.cinema.movie_booking.repository.ShowtimeRepository;
 import com.cinema.movie_booking.service.ShowtimeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ShowtimeServiceImpl implements ShowtimeService {
 
     private final ShowtimeRepository showtimeRepository;
+    private final SeatRepository seatRepository;
+    private final BookingDetailRepository bookingDetailRepository;
 
     @Override
     public List<Showtime> getByMovieId(Integer movieId) {

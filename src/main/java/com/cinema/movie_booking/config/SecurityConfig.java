@@ -1,7 +1,10 @@
 package com.cinema.movie_booking.config;
 
+import com.cinema.movie_booking.security.JwtAuthFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -9,10 +12,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    // Inject JwtAuthFilter để đăng ký vào filter chain
+    private final JwtAuthFilter jwtAuthFilter;
 
     // Công cụ băm mật khẩu
     @Bean
@@ -29,15 +37,25 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(org.springframework.security.config.Customizer.withDefaults()) // Kích hoạt CORS
-                .csrf(csrf -> csrf.disable()) // Tắt CSRF để có thể gọi POST/PUT từ Postman
+                .cors(org.springframework.security.config.Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // Cho phép TẤT CẢ các request mà không cần đăng nhập
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()          // CORS preflight
+                        .requestMatchers("/v3/api-docs/**").permitAll()                  // Swagger docs
+                        .requestMatchers("/swagger-ui/**").permitAll()                   // Swagger UI
+                        .requestMatchers("/swagger-ui.html").permitAll()
+                        .requestMatchers("/webjars/**").permitAll()
+                        .requestMatchers("/auth/**").permitAll()                         // Đăng ký / Đăng nhập
+                        .requestMatchers(HttpMethod.GET, "/movies/**").permitAll()       // Xem danh sách phim (public)
+                        .requestMatchers(HttpMethod.GET, "/showtimes/**").permitAll()    // Xem lịch chiếu (public)
+                        .requestMatchers("/bookings/**").permitAll()                     // Đặt vé / Tính giá (TODO: yêu cầu JWT sau)
+                        .anyRequest().authenticated()
                 )
-                .formLogin(form -> form.disable()) // Tắt cái bảng đăng nhập hiện ra trên trình duyệt
-                .httpBasic(basic -> basic.disable()); // Tắt hộp thoại đăng nhập cơ bản
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+                // Thêm JwtAuthFilter chạy TRƯỚC filter xác thực mặc định của Spring
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 }
