@@ -1,7 +1,6 @@
 package com.cinema.movie_booking.service.impl;
 
-import com.cinema.movie_booking.dto.BookingRequest;
-import com.cinema.movie_booking.dto.BookingResponse;
+import com.cinema.movie_booking.dto.*;
 import com.cinema.movie_booking.entity.*;
 import com.cinema.movie_booking.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -9,11 +8,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor // Tự động Inject các Repository mà không cần @Autowired
+@RequiredArgsConstructor
 public class BookingServiceImpl {
 
     private final BookingRepository bookingRepository;
@@ -21,61 +22,135 @@ public class BookingServiceImpl {
     private final SeatRepository seatRepository;
     private final ShowtimeRepository showtimeRepository;
     private final UserRepository userRepository;
+    private final VoucherRepository voucherRepository;
 
+    // ----------------------------------------------------------------
+    // API 3: POST /api/bookings/calculate-price
+    // Tính tổng tiền (kèm giảm giá voucher) KHÔNG lưu vào DB
+    // ----------------------------------------------------------------
+    @Transactional(readOnly = true)
+    public PriceCalculateResponse calculatePrice(PriceCalculateRequest request) throws Exception {
+
+        Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
+                .orElseThrow(() -> new Exception("Không tìm thấy suất chiếu!"));
+
+        int seatCount = request.getSeatIds().size();
+        if (seatCount == 0) throw new Exception("Chưa chọn ghế nào!");
+
+        BigDecimal pricePerSeat = showtime.getPrice();
+        BigDecimal subtotal = pricePerSeat.multiply(BigDecimal.valueOf(seatCount));
+
+        // Mặc định không có voucher
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String discountDescription = "Không áp dụng mã giảm giá";
+        String appliedVoucherCode = null;
+
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
+            Voucher voucher = findValidVoucher(request.getVoucherCode());
+
+            // Kiểm tra đơn hàng tối thiểu
+            if (voucher.getMinOrderValue() != null && subtotal.compareTo(voucher.getMinOrderValue()) < 0) {
+                throw new Exception("Đơn hàng phải đạt tối thiểu "
+                        + voucher.getMinOrderValue() + "đ để dùng mã này!");
+            }
+
+            discountAmount = computeDiscount(voucher, subtotal);
+            appliedVoucherCode = voucher.getCode();
+            discountDescription = buildDiscountDescription(voucher);
+        }
+
+        BigDecimal finalTotal = subtotal.subtract(discountAmount).max(BigDecimal.ZERO);
+
+        return new PriceCalculateResponse(
+                seatCount,
+                pricePerSeat,
+                subtotal,
+                appliedVoucherCode,
+                discountAmount,
+                finalTotal,
+                discountDescription
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // API 4: POST /api/bookings
+    // Chốt đơn: lưu DB, khóa ghế, trừ voucher, chặn race condition
+    // ----------------------------------------------------------------
     @Transactional(rollbackFor = Exception.class)
     public BookingResponse createBooking(BookingRequest request) throws Exception {
 
-        // BƯỚC 1: Lấy thông tin User và Showtime từ Database (Kiểm tra xem có tồn tại không)
+        // BƯỚC 1: Load User & Showtime
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new Exception("Không tìm thấy thông tin người dùng!"));
+                .orElseThrow(() -> new Exception("Không tìm thấy người dùng!"));
 
         Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
-                .orElseThrow(() -> new Exception("Không tìm thấy thông tin suất chiếu!"));
+                .orElseThrow(() -> new Exception("Không tìm thấy suất chiếu!"));
 
-        // BƯỚC 2: CHECK TRÙNG GHẾ
-        // Dùng hàm có sẵn của Spring Data JPA để đếm xem có ghế nào trong danh sách đã bị đặt chưa
+        // BƯỚC 2: CHECK TRÙNG GHẾ (race condition protection)
+        // existsByShowtimeIdAndSeatIdIn sẽ dùng SELECT FOR UPDATE ngầm trong transaction
         boolean isSeatTaken = bookingDetailRepository.existsByShowtimeIdAndSeatIdIn(
                 request.getShowtimeId(),
                 request.getSeatIds()
         );
-
         if (isSeatTaken) {
             throw new Exception("Ghế bạn chọn đã có người đặt. Vui lòng chọn ghế khác!");
         }
 
-        // BƯỚC 3: TÍNH TỔNG TIỀN
-        // Dựa vào SQL của bạn, giá vé nằm ở bảng Showtime.
-        BigDecimal ticketPrice = showtime.getPrice();
-        // Tổng tiền = Giá vé * Số lượng ghế chọn
-        BigDecimal totalAmount = ticketPrice.multiply(new BigDecimal(request.getSeatIds().size()));
+        // BƯỚC 3: TÍNH TIỀN (giống calculatePrice nhưng trong cùng transaction)
+        BigDecimal pricePerSeat = showtime.getPrice();
+        BigDecimal subtotal = pricePerSeat.multiply(BigDecimal.valueOf(request.getSeatIds().size()));
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Voucher usedVoucher = null;
 
-        // BƯỚC 4: TẠO BOOKING (Đơn hàng tổng)
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
+            usedVoucher = findValidVoucher(request.getVoucherCode());
+
+            // Kiểm tra usage limit
+            if (usedVoucher.getUsageLimit() != null
+                    && usedVoucher.getUsedCount() >= usedVoucher.getUsageLimit()) {
+                throw new Exception("Mã giảm giá đã hết lượt sử dụng!");
+            }
+
+            // Kiểm tra đơn hàng tối thiểu
+            if (usedVoucher.getMinOrderValue() != null
+                    && subtotal.compareTo(usedVoucher.getMinOrderValue()) < 0) {
+                throw new Exception("Đơn hàng phải đạt tối thiểu " + usedVoucher.getMinOrderValue() + "đ!");
+            }
+
+            discountAmount = computeDiscount(usedVoucher, subtotal);
+        }
+
+        BigDecimal totalAmount = subtotal.subtract(discountAmount).max(BigDecimal.ZERO);
+
+        // BƯỚC 4: TẠO BOOKING
         Booking newBooking = new Booking();
-        newBooking.setUser(user); // Truyền vào cả Object User
-        newBooking.setShowtime(showtime); // Truyền vào cả Object Showtime
+        newBooking.setUser(user);
+        newBooking.setShowtime(showtime);
         newBooking.setTotalPrice(totalAmount);
-        newBooking.setStatus("PENDING"); // Để PENDING chờ thanh toán
-
+        newBooking.setStatus("PENDING");
         Booking savedBooking = bookingRepository.save(newBooking);
 
-        // BƯỚC 5: TẠO CHI TIẾT BOOKING (Từng ghế một)
+        // BƯỚC 5: TẠO BOOKING DETAILS (từng ghế)
         List<BookingDetail> details = new ArrayList<>();
-
         for (Integer seatId : request.getSeatIds()) {
             Seat seat = seatRepository.findById(seatId)
-                    .orElseThrow(() -> new Exception("Không tìm thấy ghế có ID: " + seatId));
+                    .orElseThrow(() -> new Exception("Không tìm thấy ghế ID: " + seatId));
 
             BookingDetail detail = new BookingDetail();
             detail.setBooking(savedBooking);
             detail.setShowtime(showtime);
             detail.setSeat(seat);
-            detail.setPriceAtBooking(ticketPrice); // Lưu lại giá vé tại thời điểm đặt để đối soát sau này
-
+            detail.setPriceAtBooking(pricePerSeat);
             details.add(detail);
         }
-
-        // Lưu danh sách chi tiết vé vào DB cùng lúc
         bookingDetailRepository.saveAll(details);
+
+        // BƯỚC 6: TRỪ SỐ LẦN DÙNG VOUCHER
+        if (usedVoucher != null) {
+            usedVoucher.setUsedCount(usedVoucher.getUsedCount() + 1);
+            voucherRepository.save(usedVoucher);
+        }
+
         return new BookingResponse(
                 savedBooking.getId(),
                 "Đặt vé thành công! Vui lòng tiến hành thanh toán.",
@@ -83,34 +158,82 @@ public class BookingServiceImpl {
         );
     }
 
+    // ----------------------------------------------------------------
+    // Lấy lịch sử đặt vé của User
+    // ----------------------------------------------------------------
     @Transactional(readOnly = true)
-    public List<com.cinema.movie_booking.dto.BookingHistoryDTO> getUserBookings(Integer userId) {
+    public List<BookingHistoryDTO> getUserBookings(Integer userId) {
         List<Booking> bookings = bookingRepository.findByUserId(userId);
-        List<com.cinema.movie_booking.dto.BookingHistoryDTO> result = new ArrayList<>();
+        List<BookingHistoryDTO> result = new ArrayList<>();
 
         for (Booking b : bookings) {
             String movieTitle = b.getShowtime().getMovie().getTitle();
-            String cinemaName = b.getShowtime().getRoom().getCinema().getName(); // Assuming Room has Cinema
-            
-            // Lấy danh sách tên ghế từ BookingDetail
+            String cinemaName = b.getShowtime().getRoom().getCinema().getName();
+
             List<BookingDetail> details = bookingDetailRepository.findByBookingId(b.getId());
             List<String> seatNames = new ArrayList<>();
             for (BookingDetail bd : details) {
                 seatNames.add(bd.getSeat().getSeatNumber());
             }
-            String seatsStr = String.join(", ", seatNames);
 
-            result.add(new com.cinema.movie_booking.dto.BookingHistoryDTO(
+            result.add(new BookingHistoryDTO(
                     b.getId(),
                     movieTitle,
                     cinemaName,
                     b.getShowtime().getStartTime(),
                     b.getTotalPrice(),
                     b.getStatus(),
-                    seatsStr
+                    String.join(", ", seatNames)
             ));
         }
-
         return result;
+    }
+
+    // ----------------------------------------------------------------
+    // Helper: Tìm voucher hợp lệ (còn hạn + đang ACTIVE)
+    // ----------------------------------------------------------------
+    private Voucher findValidVoucher(String code) throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        return voucherRepository
+                .findByCodeIgnoreCaseAndStatusAndStartDateBeforeAndEndDateAfter(
+                        code, "ACTIVE", now, now)
+                .orElseThrow(() -> new Exception("Mã giảm giá '" + code + "' không hợp lệ hoặc đã hết hạn!"));
+    }
+
+    // ----------------------------------------------------------------
+    // Helper: Tính số tiền được giảm dựa trên loại voucher
+    // ----------------------------------------------------------------
+    private BigDecimal computeDiscount(Voucher voucher, BigDecimal subtotal) {
+        BigDecimal discount;
+        if ("PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
+            // Giảm theo %: subtotal * discountValue / 100
+            discount = subtotal
+                    .multiply(voucher.getDiscountValue())
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            // Không vượt quá maxDiscountAmount nếu có
+            if (voucher.getMaxDiscountAmount() != null) {
+                discount = discount.min(voucher.getMaxDiscountAmount());
+            }
+        } else {
+            // FIXED: giảm cố định
+            discount = voucher.getDiscountValue();
+        }
+        // Không giảm quá tổng tiền
+        return discount.min(subtotal);
+    }
+
+    // ----------------------------------------------------------------
+    // Helper: Tạo mô tả giảm giá để hiển thị cho khách
+    // ----------------------------------------------------------------
+    private String buildDiscountDescription(Voucher voucher) {
+        if ("PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
+            String desc = "Giảm " + voucher.getDiscountValue().toPlainString() + "%";
+            if (voucher.getMaxDiscountAmount() != null) {
+                desc += " (tối đa " + voucher.getMaxDiscountAmount().toPlainString() + "đ)";
+            }
+            return desc;
+        } else {
+            return "Giảm " + voucher.getDiscountValue().toPlainString() + "đ";
+        }
     }
 }

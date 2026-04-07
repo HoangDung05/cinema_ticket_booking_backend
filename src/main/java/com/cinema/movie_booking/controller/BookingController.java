@@ -2,6 +2,8 @@ package com.cinema.movie_booking.controller;
 
 import com.cinema.movie_booking.dto.BookingRequest;
 import com.cinema.movie_booking.dto.BookingResponse;
+import com.cinema.movie_booking.dto.PriceCalculateRequest;
+import com.cinema.movie_booking.dto.PriceCalculateResponse;
 import com.cinema.movie_booking.service.impl.BookingServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,23 +16,31 @@ public class BookingController {
 
     private final BookingServiceImpl bookingService;
 
-    // API Đặt vé: POST http://localhost:8080/api/bookings
-    @PostMapping
-    public ResponseEntity<?> createBooking(@RequestBody BookingRequest request) {
+    // API 3: POST /api/bookings/calculate-price
+    // Tính giá nháp (kèm voucher) KHÔNG lưu DB – dùng để hiển thị tóm tắt trước khi thanh toán
+    @PostMapping("/calculate-price")
+    public ResponseEntity<?> calculatePrice(@RequestBody PriceCalculateRequest request) {
         try {
-            // Chuyển Request cho Service xử lý (Bao gồm check ghế, tính tiền, lưu DB)
-            BookingResponse response = bookingService.createBooking(request);
-
-            // Trả về mã 200 OK cùng thông tin đơn hàng
+            PriceCalculateResponse response = bookingService.calculatePrice(request);
             return ResponseEntity.ok(response);
-
         } catch (Exception e) {
-            // Nếu có lỗi (VD: "Ghế đã có người đặt"), trả về mã 400 Bad Request kèm câu thông báo lỗi
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // API Lấy lịch sử đặt vé của User: GET http://localhost:8080/api/bookings/user/{userId}
+    // API 4: POST /api/bookings
+    // Chốt đơn: lưu DB, khóa ghế, trừ voucher, chặn 2 người đặt cùng ghế
+    @PostMapping
+    public ResponseEntity<?> createBooking(@RequestBody BookingRequest request) {
+        try {
+            BookingResponse response = bookingService.createBooking(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // API Lấy lịch sử đặt vé của User: GET /api/bookings/user/{userId}
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getUserBookingHistory(@PathVariable Integer userId) {
         try {
@@ -39,4 +49,4 @@ public class BookingController {
             return ResponseEntity.badRequest().body("Lỗi khi lấy lịch sử đặt vé: " + e.getMessage());
         }
     }
-}
+}

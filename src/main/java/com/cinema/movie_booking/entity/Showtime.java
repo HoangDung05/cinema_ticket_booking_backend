@@ -22,9 +22,6 @@ public class Showtime {
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(name = "end_time", nullable = false)
-    private LocalDateTime endTime;
-
     // DECIMAL(10, 2) map với BigDecimal để tính tiền chính xác
     @Column(name = "price", nullable = false)
     private BigDecimal price;

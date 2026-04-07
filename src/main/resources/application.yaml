@@ -46,3 +46,10 @@ logging:
     root: INFO
     com.cinema: DEBUG      # Hiển thị log chi tiết của các gói tin trong dự án
     org.hibernate.orm.results: DEBUG # Log chi tiết kết quả trả về từ DB
+
+# Cấu hình Swagger / SpringDoc
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html   # Đường dẫn tắt, sẽ redirect đến index.html
+  api-docs:
+    path: /v3/api-docs
