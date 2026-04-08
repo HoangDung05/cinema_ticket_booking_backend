@@ -34,6 +34,6 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public Optional<Voucher> getByCode(String code) {
-        return voucherRepository.findByCode(code);
+        return voucherRepository.findByCodeIgnoreCase(code);
     }
 }

@@ -3,7 +3,6 @@ package com.cinema.movie_booking.service.impl;
 import com.cinema.movie_booking.dto.*;
 import com.cinema.movie_booking.entity.*;
 import com.cinema.movie_booking.repository.*;
-import com.cinema.movie_booking.service.BookingService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,14 +17,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class BookingServiceImpl implements BookingService {
+public class BookingServiceImpl {
 
     private final BookingRepository bookingRepository;
     private final BookingDetailRepository bookingDetailRepository;
     private final ShowtimeRepository showtimeRepository;
     private final VoucherRepository voucherRepository;
     private final UserRepository userRepository;
-    private final VoucherRepository voucherRepository;
+    private final SeatRepository seatRepository;
 
     // ----------------------------------------------------------------
     // API 3: POST /api/bookings/calculate-price

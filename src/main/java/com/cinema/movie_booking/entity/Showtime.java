@@ -18,17 +18,20 @@ public class Showtime {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.EAGER) // Load thông tin phim khi lấy suất chiếu
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
 
-    @ManyToOne(fetch = FetchType.EAGER) // Load thông tin phòng khi lấy suất chiếu
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "room_id", nullable = false)
     private Room room;
 
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
+    @Column(name = "end_time", nullable = false)
+    private LocalDateTime endTime;
+
     @Column(name = "price", nullable = false)
     private BigDecimal price;
-}
+}

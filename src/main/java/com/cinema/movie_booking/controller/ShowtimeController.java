@@ -45,7 +45,7 @@ public class ShowtimeController {
     // Legacy: GET /api/showtimes/movie/{movieId} (kept for backward compat)
     @GetMapping("/showtimes/movie/{movieId}")
     public ResponseEntity<List<Showtime>> getShowtimesByMovieLegacy(@PathVariable Integer movieId) {
-        return ResponseEntity.ok(showtimeService.getShowtimesByMovieId(movieId));
+        return ResponseEntity.ok(showtimeService.getByMovieId(movieId));
     }
 
     /**
