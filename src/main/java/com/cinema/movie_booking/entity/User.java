@@ -36,4 +36,7 @@ public class User {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
+
+    @Column(name = "status")
+    private String status = "ACTIVE"; // ACTIVE: Hoạt động, LOCKED: Bị khóa
 }

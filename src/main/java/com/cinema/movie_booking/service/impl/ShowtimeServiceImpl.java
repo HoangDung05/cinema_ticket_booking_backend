@@ -100,25 +100,25 @@ public class ShowtimeServiceImpl implements ShowtimeService {
 
     // 6. Admin: Cập nhật suất chiếu
     @Override
-    public Showtime updateShowtime(Integer id, Showtime showtime) {
-        Showtime existing = getById(id);
+    public Showtime updateShowtime(Integer id, Showtime details) {
+        // 1. Tìm suất chiếu cũ trong DB
+        Showtime existing = showtimeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy suất chiếu!"));
 
-        boolean isOverlapping = showtimeRepository.existsOverlappingShowtime(
-                showtime.getRoom().getId(),
-                showtime.getStartTime(),
-                showtime.getEndTime(),
-                id);
+        // 2. Chỉ cập nhật những trường nào có gửi lên (Tránh null)
+        if (details.getStartTime() != null)
+            existing.setStartTime(details.getStartTime());
+        if (details.getEndTime() != null)
+            existing.setEndTime(details.getEndTime());
+        if (details.getPrice() != null)
+            existing.setPrice(details.getPrice());
 
-        if (isOverlapping) {
-            throw new RuntimeException("Lỗi: Thời gian cập nhật bị trùng với lịch chiếu khác!");
+        // Nếu có đổi phòng thì mới set phòng mới
+        if (details.getRoom() != null && details.getRoom().getId() != null) {
+            existing.setRoom(details.getRoom());
         }
 
-        existing.setStartTime(showtime.getStartTime());
-        existing.setEndTime(showtime.getEndTime());
-        existing.setPrice(showtime.getPrice());
-        existing.setMovie(showtime.getMovie());
-        existing.setRoom(showtime.getRoom());
-
+        // 3. Lưu lại đối tượng đã cập nhật
         return showtimeRepository.save(existing);
     }
 
@@ -127,5 +127,14 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     public void deleteShowtime(Integer id) {
         showtimeRepository.deleteById(id);
     }
-}
 
+    @Override
+    public List<Showtime> getAllShowtimes() {
+        return showtimeRepository.findAll();
+    }
+
+    @Override
+    public List<Showtime> getShowtimesByMovieId(Integer movieId) {
+        return showtimeRepository.findByMovieId(movieId);
+    }
+}

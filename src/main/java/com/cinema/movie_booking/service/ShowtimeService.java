@@ -29,3 +29,10 @@ public interface ShowtimeService {
     void deleteShowtime(Integer id);
 }
 
+    // 5. Lấy chi tiết 1 suất chiếu
+    Showtime getById(Integer id);
+
+    List<Showtime> getAllShowtimes();
+
+    List<Showtime> getShowtimesByMovieId(Integer movieId);
+}

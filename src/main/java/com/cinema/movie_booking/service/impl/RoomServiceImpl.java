@@ -44,10 +44,18 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public Room updateRoom(Integer id, Room roomDetails) {
+        // 1. Tìm phòng cũ trong DB
+        Room room = roomRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + id));
 
-        Room room = getRoomById(id);
+        // 2. Cập nhật các trường thông tin
         room.setName(roomDetails.getName());
 
+        if (roomDetails.getCinema() != null) {
+            room.setCinema(roomDetails.getCinema());
+        }
+
+        // 3. Lưu lại
         return roomRepository.save(room);
     }
 

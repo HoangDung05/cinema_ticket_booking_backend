@@ -16,4 +16,5 @@ public interface MovieRepository extends JpaRepository<Movie, Integer> {
     List<Movie> findByStatus(MovieStatus status);
 
     List<Movie> findByReleaseDate(LocalDate releaseDate);
+
 }

@@ -1,0 +1,203 @@
+
+package com.cinema.movie_booking.controller;
+
+import com.cinema.movie_booking.entity.Cinema;
+import com.cinema.movie_booking.entity.Movie;
+import com.cinema.movie_booking.entity.Room;
+import com.cinema.movie_booking.entity.Showtime;
+import com.cinema.movie_booking.entity.User;
+import com.cinema.movie_booking.service.BookingService;
+import com.cinema.movie_booking.service.CinemaService;
+import com.cinema.movie_booking.service.MovieService;
+import com.cinema.movie_booking.service.RoomService;
+import com.cinema.movie_booking.service.ShowtimeService;
+import com.cinema.movie_booking.service.UserService;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/admin")
+@RequiredArgsConstructor
+
+public class AdminController {
+
+    private final BookingService bookingService;
+    private final UserService userService;
+    private final ShowtimeService showtimeService;
+    private final MovieService movieService;
+    private final CinemaService cinemaService;
+
+    private final RoomService roomService;
+
+    // 1. API Lấy số liệu Dashboard
+    // GET http://localhost:8080/api/admin/stats
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats() {
+        return ResponseEntity.ok(bookingService.getAdminStats());
+    }
+
+    // 2. API Xem toàn bộ lịch sử đặt vé hệ thống
+    // GET http://localhost:8080/api/admin/bookings
+    @GetMapping("/bookings")
+    public ResponseEntity<?> getAllBookings() {
+        return ResponseEntity.ok(bookingService.getAllBookingsForAdmin());
+    }
+
+    // 3. API Quản lý danh sách khách hàng (như đã làm ở bước trước)
+
+    @GetMapping("/customers")
+    public ResponseEntity<?> getCustomers() {
+        return ResponseEntity.ok(userService.getAllCustomers());
+    }
+
+    // 3.1. Lấy tất cả user
+    @GetMapping("/allusers")
+    public ResponseEntity<?> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
+    }
+    // 3.2. Cập nhật thông tin user
+
+    @PutMapping("/customers/{id}")
+    public ResponseEntity<?> updateCustomer(@PathVariable Integer id, @RequestBody User user) {
+        return ResponseEntity.ok(userService.updateUser(id, user));
+    }
+
+    // 3.3. Xóa user
+    @DeleteMapping("/customers/{id}")
+    public ResponseEntity<?> deleteCustomer(@PathVariable Integer id) {
+        userService.deleteUser(id);
+        return ResponseEntity.ok("Đã xóa khách hàng ID: " + id);
+    }
+
+    // 3.4. Khóa tài khoản
+    @PutMapping("/customers/{id}/status")
+    public ResponseEntity<?> changeStatus(
+            @PathVariable Integer id,
+            @RequestParam String status) {
+        try {
+            User updatedUser = userService.updateUserStatus(id, status);
+            return ResponseEntity.ok(
+                    "Người dùng " + updatedUser.getFullName() + " hiện đang ở trạng thái: " + updatedUser.getStatus());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // 4. Showtimes
+
+    // 4.2 thêm
+    @PostMapping("/showtimes")
+    public ResponseEntity<?> create(@RequestBody Showtime showtime) {
+        try {
+            Showtime created = showtimeService.createShowtime(showtime);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            // Trả về lỗi nếu trùng lịch chiếu
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
+    }
+
+    // 4.3 sửa
+    @PutMapping("/showtimes/{id}")
+    public ResponseEntity<?> update(@PathVariable Integer id, @RequestBody Showtime showtime) {
+        try {
+            return ResponseEntity.ok(showtimeService.updateShowtime(id, showtime));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // 4.4 xóa
+    @DeleteMapping("/showtimes/{id}")
+    public ResponseEntity<?> deleteShowtimes(@PathVariable Integer id) {
+        try {
+            showtimeService.deleteShowtime(id);
+            return ResponseEntity.ok("Xóa thành công suất chiếu ID: " + id);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Không thể xóa: " + e.getMessage());
+        }
+    }
+
+    // 5.1. API THÊM PHIM MỚI (POST)
+
+    @PostMapping("/movies")
+    public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
+        Movie savedMovie = movieService.saveMovie(movie);
+        return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
+    }
+
+    // 5.2. API CẬP NHẬT PHIM (PUT)
+
+    @PutMapping("/movies/{id}")
+    public ResponseEntity<Movie> updateMovie(@PathVariable Integer id, @RequestBody Movie movieDetails) {
+
+        Movie existingMovie = movieService.getMovieById(id);
+
+        existingMovie.setTitle(movieDetails.getTitle());
+        existingMovie.setDescription(movieDetails.getDescription());
+        existingMovie.setDuration(movieDetails.getDuration());
+        existingMovie.setReleaseDate(movieDetails.getReleaseDate());
+        existingMovie.setPosterUrl(movieDetails.getPosterUrl());
+        existingMovie.setTrailerUrl(movieDetails.getTrailerUrl());
+        existingMovie.setStatus(movieDetails.getStatus());
+
+        Movie updatedMovie = movieService.saveMovie(existingMovie);
+        return ResponseEntity.ok(updatedMovie);
+    }
+
+    // 5.3. API XÓA PHIM (DELETE)
+
+    @DeleteMapping("/movies/{id}")
+    public ResponseEntity<String> deleteMovie(@PathVariable Integer id) {
+        movieService.deleteMovie(id);
+        return ResponseEntity.ok("Xóa phim thành công!");
+    }
+
+    // 6 Room
+    // 6.1. Tạo phòng mới cho 1 rạp
+    @PostMapping("/rooms/cinema/{cinemaId}")
+    public ResponseEntity<Room> create(@PathVariable Integer cinemaId, @RequestBody Room room) {
+        return ResponseEntity.ok(roomService.createRoom(cinemaId, room));
+    }
+
+    // 6.2 Xóa phòng
+    @DeleteMapping("/rooms/{id}")
+    public ResponseEntity<String> deleteRooms(@PathVariable Integer id) {
+        roomService.deleteRoom(id);
+        return ResponseEntity.ok("Đã xóa phòng thành công!");
+    }
+
+    // 6.3 Sửa room
+    @PutMapping("/rooms/{id}")
+    public ResponseEntity<?> updateRoom(@PathVariable Integer id, @RequestBody Room room) {
+        try {
+            Room updatedRoom = roomService.updateRoom(id, room);
+            return ResponseEntity.ok(updatedRoom);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // 7. Cinema
+    // 7.1. Tạo mới rạp
+    @PostMapping("cinemas")
+    public ResponseEntity<Cinema> create(@RequestBody Cinema cinema) {
+        return ResponseEntity.ok(cinemaService.createCinema(cinema));
+    }
+
+    // 7.2. Cập nhật thông tin rạp
+    @PutMapping("/cinemas/{id}")
+    public ResponseEntity<Cinema> update(@PathVariable Integer id, @RequestBody Cinema cinema) {
+        return ResponseEntity.ok(cinemaService.updateCinema(id, cinema));
+    }
+
+    // 7.3. Xóa rạp
+    @DeleteMapping("/cinemas/{id}")
+    public ResponseEntity<String> delete(@PathVariable Integer id) {
+        cinemaService.deleteCinema(id);
+        return ResponseEntity.ok("Đã xóa rạp thành công!");
+    }
+}

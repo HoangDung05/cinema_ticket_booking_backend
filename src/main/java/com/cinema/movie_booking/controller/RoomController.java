@@ -16,6 +16,12 @@ public class RoomController {
         this.roomService = roomService;
     }
 
+    // 0. Lấy danh sách tất cả các phòng
+    @GetMapping("/allrooms")
+    public ResponseEntity<?> getAllRooms() {
+        return ResponseEntity.ok(roomService.getAllRooms());
+    }
+
     // 1. Lấy tất cả phòng của 1 rạp cụ thể
     @GetMapping("/cinema/{cinemaId}")
     public List<Room> getByCinema(@PathVariable Integer cinemaId) {
