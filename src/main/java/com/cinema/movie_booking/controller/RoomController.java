@@ -34,16 +34,5 @@ public class RoomController {
         return ResponseEntity.ok(roomService.getRoomById(id));
     }
 
-    // 3. Tạo phòng mới cho 1 rạp
-    @PostMapping("/cinema/{cinemaId}")
-    public ResponseEntity<Room> create(@PathVariable Integer cinemaId, @RequestBody Room room) {
-        return ResponseEntity.ok(roomService.createRoom(cinemaId, room));
-    }
 
-    // 4. Xóa phòng
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
-        roomService.deleteRoom(id);
-        return ResponseEntity.ok("Đã xóa phòng thành công!");
-    }
 }

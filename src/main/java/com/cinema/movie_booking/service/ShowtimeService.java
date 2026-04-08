@@ -27,10 +27,6 @@ public interface ShowtimeService {
 
     // 7. Admin: Xóa suất chiếu
     void deleteShowtime(Integer id);
-}
-
-    // 5. Lấy chi tiết 1 suất chiếu
-    Showtime getById(Integer id);
 
     List<Showtime> getAllShowtimes();
 

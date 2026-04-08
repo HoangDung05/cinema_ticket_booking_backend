@@ -3,6 +3,10 @@ package com.cinema.movie_booking.service.impl;
 import com.cinema.movie_booking.dto.AdminStatsDTO;
 import com.cinema.movie_booking.dto.BookingRequest;
 import com.cinema.movie_booking.dto.BookingResponse;
+import com.cinema.movie_booking.dto.BookingHistoryDTO;
+import com.cinema.movie_booking.dto.PriceCalculateRequest;
+import com.cinema.movie_booking.dto.PriceCalculateResponse;
+import com.cinema.movie_booking.service.BookingService;
 import com.cinema.movie_booking.entity.*;
 import com.cinema.movie_booking.repository.*;
 
@@ -19,7 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class BookingServiceImpl {
+public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final BookingDetailRepository bookingDetailRepository;
@@ -241,12 +245,10 @@ public class BookingServiceImpl {
         }
     }
 
-    @Override
     public List<Booking> getAllBookingsForAdmin() {
         return bookingRepository.findAllByOrderByCreatedAtDesc();
     }
 
-    @Override
     public AdminStatsDTO getAdminStats() {
         // Chỉ tính doanh thu từ những đơn đã thanh toán (PAID)
         List<Booking> paidBookings = bookingRepository.findByStatus("PAID");

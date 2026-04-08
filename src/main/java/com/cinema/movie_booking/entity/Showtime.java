@@ -29,9 +29,10 @@ public class Showtime {
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(name = "end_time", nullable = false)
+    // end_time có thể chưa có giá trị ở dữ liệu cũ, nên cho phép nullable để Hibernate không tạo DDL lỗi.
+    @Column(name = "end_time", nullable = true)
     private LocalDateTime endTime;
 
     @Column(name = "price", nullable = false)
     private BigDecimal price;
-}
+}

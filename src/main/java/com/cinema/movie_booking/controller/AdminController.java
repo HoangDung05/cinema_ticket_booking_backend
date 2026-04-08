@@ -181,6 +181,9 @@ public class AdminController {
         }
     }
 
+
+
+
     // 7. Cinema
     // 7.1. Tạo mới rạp
     @PostMapping("cinemas")

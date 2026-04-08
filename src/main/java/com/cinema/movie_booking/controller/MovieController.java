@@ -76,6 +76,7 @@ public class MovieController {
     public ResponseEntity<String> deleteMovie(@PathVariable Integer id) {
         movieService.deleteMovie(id);
         return ResponseEntity.ok("Xóa phim thành công!");
+    }
     // 3. Lấy phim đang chiếu
     @GetMapping("/now-showing")
     public ResponseEntity<List<Movie>> getNowShowing() {
