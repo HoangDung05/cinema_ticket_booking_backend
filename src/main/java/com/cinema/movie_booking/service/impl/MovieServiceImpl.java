@@ -64,5 +64,16 @@ public class MovieServiceImpl implements MovieService {
     public List<Movie> getComingSoonMovies() {
         // Tương tự cho phim sắp chiếu
         return movieRepository.findByStatus(MovieStatus.COMING_SOON);
+
+    }
+
+    @Override
+    public List<Movie> searchMovies(String keyword) {
+        return movieRepository.findByTitleContainingIgnoreCase(keyword);
+    }
+
+    @Override
+    public List<Movie> filterMovies(LocalDate date) {
+        return movieRepository.findByReleaseDate(date);
     }
 }
