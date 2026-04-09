@@ -167,11 +167,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // ----------------------------------------------------------------
-    // Lấy lịch sử đặt vé của User
+    // Lấy lịch sử đặt vé của User (tìm theo email)
     // ----------------------------------------------------------------
     @Transactional(readOnly = true)
-    public List<BookingHistoryDTO> getUserBookings(Integer userId) {
-        List<Booking> bookings = bookingRepository.findByUserId(userId);
+    public List<BookingHistoryDTO> getUserBookings(String email) {
+        List<Booking> bookings = bookingRepository.findByUserEmail(email);
         List<BookingHistoryDTO> result = new ArrayList<>();
 
         for (Booking b : bookings) {

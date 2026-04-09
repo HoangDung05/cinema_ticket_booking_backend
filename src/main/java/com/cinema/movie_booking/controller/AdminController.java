@@ -54,26 +54,26 @@ public class AdminController {
     }
 
     // 3.1. Lấy tất cả user
-    @GetMapping("/allusers")
+    @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
     // 3.2. Cập nhật thông tin user
 
-    @PutMapping("/customers/{id}")
+    @PutMapping("/users/{id}")
     public ResponseEntity<?> updateCustomer(@PathVariable Integer id, @RequestBody User user) {
         return ResponseEntity.ok(userService.updateUser(id, user));
     }
 
     // 3.3. Xóa user
-    @DeleteMapping("/customers/{id}")
+    @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteCustomer(@PathVariable Integer id) {
         userService.deleteUser(id);
         return ResponseEntity.ok("Đã xóa khách hàng ID: " + id);
     }
 
     // 3.4. Khóa tài khoản
-    @PutMapping("/customers/{id}/status")
+    @PutMapping("/user/{id}/status")
     public ResponseEntity<?> changeStatus(
             @PathVariable Integer id,
             @RequestParam String status) {
@@ -90,7 +90,7 @@ public class AdminController {
 
     // 4.2 thêm
     @PostMapping("/showtimes")
-    public ResponseEntity<?> create(@RequestBody Showtime showtime) {
+    public ResponseEntity<?> createShowtime(@RequestBody Showtime showtime) {
         try {
             Showtime created = showtimeService.createShowtime(showtime);
             return new ResponseEntity<>(created, HttpStatus.CREATED);
@@ -102,7 +102,7 @@ public class AdminController {
 
     // 4.3 sửa
     @PutMapping("/showtimes/{id}")
-    public ResponseEntity<?> update(@PathVariable Integer id, @RequestBody Showtime showtime) {
+    public ResponseEntity<?> updateShowtime(@PathVariable Integer id, @RequestBody Showtime showtime) {
         try {
             return ResponseEntity.ok(showtimeService.updateShowtime(id, showtime));
         } catch (RuntimeException e) {
@@ -159,7 +159,7 @@ public class AdminController {
     // 6 Room
     // 6.1. Tạo phòng mới cho 1 rạp
     @PostMapping("/rooms/cinema/{cinemaId}")
-    public ResponseEntity<Room> create(@PathVariable Integer cinemaId, @RequestBody Room room) {
+    public ResponseEntity<Room> createRoom(@PathVariable Integer cinemaId, @RequestBody Room room) {
         return ResponseEntity.ok(roomService.createRoom(cinemaId, room));
     }
 
@@ -186,20 +186,20 @@ public class AdminController {
 
     // 7. Cinema
     // 7.1. Tạo mới rạp
-    @PostMapping("cinemas")
-    public ResponseEntity<Cinema> create(@RequestBody Cinema cinema) {
+    @PostMapping("/cinemas")
+    public ResponseEntity<Cinema> createCinema(@RequestBody Cinema cinema) {
         return ResponseEntity.ok(cinemaService.createCinema(cinema));
     }
 
     // 7.2. Cập nhật thông tin rạp
     @PutMapping("/cinemas/{id}")
-    public ResponseEntity<Cinema> update(@PathVariable Integer id, @RequestBody Cinema cinema) {
+    public ResponseEntity<Cinema> updateCinema(@PathVariable Integer id, @RequestBody Cinema cinema) {
         return ResponseEntity.ok(cinemaService.updateCinema(id, cinema));
     }
 
     // 7.3. Xóa rạp
     @DeleteMapping("/cinemas/{id}")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
+    public ResponseEntity<String> deleteCinema(@PathVariable Integer id) {
         cinemaService.deleteCinema(id);
         return ResponseEntity.ok("Đã xóa rạp thành công!");
     }

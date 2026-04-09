@@ -36,12 +36,6 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với Email: " + email));
     }
 
-    /**
-     * Hàm Update dùng chung cho cả Admin và User
-     * 
-     * @param identifier: Có thể là ID (Integer) hoặc Email (String)
-     * @param isEmail:    Nếu true thì tìm theo email, false thì tìm theo ID
-     */
     @Override
     public User updateProfile(String email, User userDetails, boolean isSelfUpdate) {
         // 1. Tìm người dùng hiện tại trong DB dựa trên email gốc

@@ -28,22 +28,4 @@ public class CinemaController {
         return ResponseEntity.ok(cinemaService.getCinemaById(id));
     }
 
-    // 3. Tạo mới rạp
-    @PostMapping
-    public ResponseEntity<Cinema> create(@RequestBody Cinema cinema) {
-        return ResponseEntity.ok(cinemaService.createCinema(cinema));
-    }
-
-    // 4. Cập nhật thông tin rạp
-    @PutMapping("/{id}")
-    public ResponseEntity<Cinema> update(@PathVariable Integer id, @RequestBody Cinema cinema) {
-        return ResponseEntity.ok(cinemaService.updateCinema(id, cinema));
-    }
-
-    // 5. Xóa rạp
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Integer id) {
-        cinemaService.deleteCinema(id);
-        return ResponseEntity.ok("Đã xóa rạp thành công!");
-    }
 }

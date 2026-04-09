@@ -18,19 +18,7 @@ public class ShowtimeController {
 
     private final ShowtimeService showtimeService;
 
-    // API 1: GET /api/movies/{movieId}/showtimes
-    // Trả về lịch chiếu của phim kèm thông tin rạp, phòng (dùng cho trang Chi tiết Phim)
-    @GetMapping("/movies/{movieId}/showtimes")
-    public ResponseEntity<?> getShowtimesByMovie(@PathVariable Integer movieId) {
-        try {
-            List<ShowtimeDTO> showtimes = showtimeService.getShowtimeDTOsByMovieId(movieId);
-            return ResponseEntity.ok(showtimes);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi: " + e.getMessage());
-        }
-    }
-
-    // Tất cả suất chiếu
+    // Lấy tất cả suất chiếu
     @GetMapping
     public ResponseEntity<List<Showtime>> getAll() {
         return ResponseEntity.ok(showtimeService.getAllShowtimes());
@@ -43,6 +31,16 @@ public class ShowtimeController {
             return ResponseEntity.ok(showtimeService.getById(id));
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Lấy sơ đồ ghế của 1 suất chiếu: GET /api/showtimes/{id}/seats
+    @GetMapping("/{id}/seats")
+    public ResponseEntity<?> getSeatsByShowtime(@PathVariable Integer id) {
+        try {
+            return ResponseEntity.ok(showtimeService.getSeatsByShowtimeId(id));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

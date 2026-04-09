@@ -8,7 +8,7 @@ import com.cinema.movie_booking.entity.User;
 import com.cinema.movie_booking.repository.RoleRepository;
 import com.cinema.movie_booking.repository.UserRepository;
 import com.cinema.movie_booking.security.JwtUtils;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class AuthServiceImpl {
 
     private final UserRepository userRepository;
@@ -26,6 +25,18 @@ public class AuthServiceImpl {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
+
+    public AuthServiceImpl(UserRepository userRepository,
+                           RoleRepository roleRepository,
+                           PasswordEncoder passwordEncoder,
+                           @Lazy AuthenticationManager authenticationManager,
+                           JwtUtils jwtUtils) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtUtils = jwtUtils;
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public String registerUser(RegisterRequest request) throws Exception {

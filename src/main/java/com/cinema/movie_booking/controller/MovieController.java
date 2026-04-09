@@ -42,41 +42,7 @@ public class MovieController {
         Movie movie = movieService.getMovieById(id);
         return ResponseEntity.ok(movie);
     }
-
-    // 3. API THÊM PHIM MỚI
-
-    @PostMapping
-    public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
-        Movie savedMovie = movieService.saveMovie(movie);
-        return new ResponseEntity<>(savedMovie, HttpStatus.CREATED);
-    }
-
-    // 4. API CẬP NHẬT PHIM
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Movie> updateMovie(@PathVariable Integer id, @RequestBody Movie movieDetails) {
-
-        Movie existingMovie = movieService.getMovieById(id);
-
-        existingMovie.setTitle(movieDetails.getTitle());
-        existingMovie.setDescription(movieDetails.getDescription());
-        existingMovie.setDuration(movieDetails.getDuration());
-        existingMovie.setReleaseDate(movieDetails.getReleaseDate());
-        existingMovie.setPosterUrl(movieDetails.getPosterUrl());
-        existingMovie.setTrailerUrl(movieDetails.getTrailerUrl());
-        existingMovie.setStatus(movieDetails.getStatus());
-
-        Movie updatedMovie = movieService.saveMovie(existingMovie);
-        return ResponseEntity.ok(updatedMovie);
-    }
-
-    // 5. API XÓA PHIM
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteMovie(@PathVariable Integer id) {
-        movieService.deleteMovie(id);
-        return ResponseEntity.ok("Xóa phim thành công!");
-    }
+    
     // 3. Lấy phim đang chiếu
     @GetMapping("/now-showing")
     public ResponseEntity<List<Movie>> getNowShowing() {

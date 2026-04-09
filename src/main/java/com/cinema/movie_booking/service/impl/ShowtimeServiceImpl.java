@@ -82,19 +82,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy suất chiếu ID: " + id));
     }
 
-    // 5. Admin: Thêm suất chiếu mới (check trùng lịch)
+    // 5. Admin: Thêm suất chiếu mới
     @Override
     public Showtime createShowtime(Showtime showtime) {
-        boolean isOverlapping = showtimeRepository.existsOverlappingShowtime(
-                showtime.getRoom().getId(),
-                showtime.getStartTime(),
-                showtime.getEndTime(),
-                null);
-
-        if (isOverlapping) {
-            throw new RuntimeException("Lỗi: Phòng này đã có lịch chiếu khác trong khoảng thời gian này!");
-        }
-
         return showtimeRepository.save(showtime);
     }
 
@@ -108,8 +98,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         // 2. Chỉ cập nhật những trường nào có gửi lên (Tránh null)
         if (details.getStartTime() != null)
             existing.setStartTime(details.getStartTime());
-        if (details.getEndTime() != null)
-            existing.setEndTime(details.getEndTime());
         if (details.getPrice() != null)
             existing.setPrice(details.getPrice());
 
