@@ -9,7 +9,7 @@ import com.cinema.movie_booking.service.ShowtimeService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,5 +60,24 @@ public class MovieController {
     public ResponseEntity<List<Showtime>> getShowtimesByMovie(@PathVariable Integer movieId) {
         List<Showtime> showtimes = showtimeService.getShowtimesByMovieId(movieId);
         return ResponseEntity.ok(showtimes);
+    }
+
+    // 5. Tìm kiếm phim:
+    @GetMapping("/search")
+    public ResponseEntity<List<Movie>> search(@RequestParam String keyword) {
+        return ResponseEntity.ok(movieService.searchMovies(keyword));
+    }
+
+    // 6. Lọc phim:
+    @GetMapping("/filter")
+    public ResponseEntity<List<Movie>> filter(
+            @RequestParam(required = false) String date) {
+
+        if (date != null) {
+            LocalDate localDate = LocalDate.parse(date);
+            return ResponseEntity.ok(movieService.filterMovies(localDate));
+        }
+
+        return ResponseEntity.ok(movieService.getAllMovies());
     }
 }

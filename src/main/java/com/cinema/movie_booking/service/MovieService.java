@@ -21,4 +21,8 @@ public interface MovieService {
     List<Movie> getNowShowingMovies();
 
     List<Movie> getComingSoonMovies();
+
+    List<Movie> searchMovies(String keyword);
+
+    List<Movie> filterMovies(LocalDate date);
 }

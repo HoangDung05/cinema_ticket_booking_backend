@@ -17,4 +17,6 @@ public interface MovieRepository extends JpaRepository<Movie, Integer> {
 
     List<Movie> findByReleaseDate(LocalDate releaseDate);
 
+    List<Movie> findByTitleContainingIgnoreCase(String keyword);
+
 }
