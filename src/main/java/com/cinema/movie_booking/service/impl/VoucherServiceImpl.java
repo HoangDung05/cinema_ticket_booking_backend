@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 public class VoucherServiceImpl implements VoucherService {
 
     private final VoucherRepository voucherRepository;
+    private final com.cinema.movie_booking.repository.UserVoucherRepository userVoucherRepository;
+    private final com.cinema.movie_booking.service.UserService userService;
 
     @Override
     public List<Voucher> getAllVouchers() {
@@ -35,5 +37,52 @@ public class VoucherServiceImpl implements VoucherService {
     @Override
     public Optional<Voucher> getByCode(String code) {
         return voucherRepository.findByCodeIgnoreCase(code);
+    }
+
+    @Override
+    public List<Voucher> getActiveVouchers() {
+        return voucherRepository.findActiveVouchers();
+    }
+
+    @Override
+    public List<com.cinema.movie_booking.entity.UserVoucher> getUserVouchers(String email) {
+        com.cinema.movie_booking.entity.User user = userService.getByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        return userVoucherRepository.findByUser(user);
+    }
+
+    @Override
+    public com.cinema.movie_booking.entity.UserVoucher claimVoucher(String email, String code) {
+        com.cinema.movie_booking.entity.User user = userService.getByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        Voucher voucher = voucherRepository.findByCodeIgnoreCase(code)
+                .orElseThrow(() -> new RuntimeException("Voucher code not found: " + code));
+
+        if (!"ACTIVE".equals(voucher.getStatus())) {
+            throw new RuntimeException("Voucher is not active");
+        }
+        if (voucher.getUsageLimit() != null && voucher.getUsedCount() >= voucher.getUsageLimit()) {
+            throw new RuntimeException("Voucher usage limit reached");
+        }
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())) {
+            throw new RuntimeException("Voucher is not valid at this time");
+        }
+
+        Optional<com.cinema.movie_booking.entity.UserVoucher> existing = userVoucherRepository.findByUserAndVoucher(user, voucher);
+        if (existing.isPresent()) {
+            throw new RuntimeException("You have already claimed this voucher");
+        }
+
+        com.cinema.movie_booking.entity.UserVoucher userVoucher = new com.cinema.movie_booking.entity.UserVoucher();
+        userVoucher.setUser(user);
+        userVoucher.setVoucher(voucher);
+        // assignedAt is handled by @PrePersist in UserVoucher entity
+        
+        return userVoucherRepository.save(userVoucher);
     }
 }

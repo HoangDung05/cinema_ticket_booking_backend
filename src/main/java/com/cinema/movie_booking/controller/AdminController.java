@@ -29,8 +29,8 @@ public class AdminController {
     private final ShowtimeService showtimeService;
     private final MovieService movieService;
     private final CinemaService cinemaService;
-
     private final RoomService roomService;
+    private final com.cinema.movie_booking.service.VoucherService voucherService;
 
     // 1. API Lấy số liệu Dashboard
     // GET http://localhost:8080/api/admin/stats
@@ -181,9 +181,6 @@ public class AdminController {
         }
     }
 
-
-
-
     // 7. Cinema
     // 7.1. Tạo mới rạp
     @PostMapping("/cinemas")
@@ -202,5 +199,11 @@ public class AdminController {
     public ResponseEntity<String> deleteCinema(@PathVariable Integer id) {
         cinemaService.deleteCinema(id);
         return ResponseEntity.ok("Đã xóa rạp thành công!");
+    }
+
+    // 8. Vouchers
+    @GetMapping("/vouchers")
+    public ResponseEntity<?> getAllVouchers() {
+        return ResponseEntity.ok(voucherService.getAllVouchers());
     }
 }

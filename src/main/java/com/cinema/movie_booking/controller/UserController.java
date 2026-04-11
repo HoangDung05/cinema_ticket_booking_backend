@@ -21,6 +21,7 @@ public class UserController {
 
     private final UserService userService;
     private final BookingService bookingService;
+    private final com.cinema.movie_booking.service.VoucherService voucherService;
 
     // Lấy thông tin cá nhân: GET /api/users/me?email=...
     @GetMapping("/me")
@@ -41,6 +42,16 @@ public class UserController {
             return ResponseEntity.ok(bookingService.getUserBookings(email));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Lỗi khi lấy lịch sử đặt vé: " + e.getMessage());
+        }
+    }
+
+    // Lấy danh sách ví voucher: GET /api/users/me/vouchers?email=...
+    @GetMapping("/me/vouchers")
+    public ResponseEntity<?> getMyVouchers(@RequestParam String email) {
+        try {
+            return ResponseEntity.ok(voucherService.getUserVouchers(email));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

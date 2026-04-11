@@ -20,4 +20,10 @@ public interface VoucherRepository extends JpaRepository<Voucher, Integer> {
             LocalDateTime now1,
             LocalDateTime now2
     );
+
+    @org.springframework.data.jpa.repository.Query("SELECT v FROM Voucher v WHERE v.status = 'ACTIVE' " +
+            "AND v.startDate <= CURRENT_TIMESTAMP " +
+            "AND v.endDate >= CURRENT_TIMESTAMP " +
+            "AND (v.usageLimit IS NULL OR v.usedCount < v.usageLimit)")
+    java.util.List<Voucher> findActiveVouchers();
 }

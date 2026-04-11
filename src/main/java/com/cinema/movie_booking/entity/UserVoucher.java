@@ -21,11 +21,13 @@ public class UserVoucher {
     // Ánh xạ cột user_id (Khóa ngoại trỏ tới bảng users)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private User user;
 
     // Ánh xạ cột voucher_id (Khóa ngoại trỏ tới bảng vouchers)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voucher_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Voucher voucher;
 
     // Ánh xạ cột is_used
