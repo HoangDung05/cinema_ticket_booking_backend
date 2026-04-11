@@ -20,13 +20,13 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public Room getRoomById(Integer id) {
-        return roomRepository.findById(id)
+        return roomRepository.findByIdWithCinema(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Phòng chiếu với ID: " + id));
     }
 
     @Override
     public List<Room> getAllRooms() {
-        return roomRepository.findAll();
+        return roomRepository.findAllWithCinema();
     }
 
     @Override
@@ -65,5 +65,15 @@ public class RoomServiceImpl implements RoomService {
             throw new RuntimeException("Không tìm thấy phòng với ID: " + id + " để xóa!");
         }
         roomRepository.deleteById(id);
+    }
+
+    @Override
+    public Room updateRoomAdmin(Integer id, String name, Integer cinemaId) {
+        Room room = getRoomById(id);
+        room.setName(name);
+        var cinema = cinemaRepository.findById(cinemaId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy rạp với ID: " + cinemaId));
+        room.setCinema(cinema);
+        return roomRepository.save(room);
     }
 }

@@ -66,6 +66,7 @@ public class AuthServiceImpl {
         return "Đăng ký tài khoản thành công!";
     }
 
+    @Transactional(readOnly = true)
     public JwtResponse loginUser(LoginRequest request) {
         // 1. Xác thực Username và Password với Spring Security
         Authentication authentication = authenticationManager.authenticate(
@@ -87,7 +88,8 @@ public class AuthServiceImpl {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
-                user.getRole().getName()
+                user.getRole().getName(),
+                user.getRole().getId()
         );
     }
 }

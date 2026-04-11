@@ -15,4 +15,6 @@ public interface RoomService {
     Room getRoomById(Integer id);
 
     Room updateRoom(Integer id, Room roomDetails);
+
+    Room updateRoomAdmin(Integer id, String name, Integer cinemaId);
 }
