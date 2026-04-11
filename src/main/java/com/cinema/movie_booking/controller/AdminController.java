@@ -6,6 +6,7 @@ import com.cinema.movie_booking.entity.Movie;
 import com.cinema.movie_booking.entity.Room;
 import com.cinema.movie_booking.entity.Showtime;
 import com.cinema.movie_booking.entity.User;
+import com.cinema.movie_booking.entity.Voucher;
 import com.cinema.movie_booking.service.BookingService;
 import com.cinema.movie_booking.service.CinemaService;
 import com.cinema.movie_booking.service.MovieService;
@@ -13,6 +14,7 @@ import com.cinema.movie_booking.service.RoomService;
 import com.cinema.movie_booking.service.ShowtimeService;
 import com.cinema.movie_booking.service.UserService;
 import lombok.RequiredArgsConstructor;
+import com.cinema.movie_booking.service.VoucherService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +31,7 @@ public class AdminController {
     private final ShowtimeService showtimeService;
     private final MovieService movieService;
     private final CinemaService cinemaService;
-
+    private final VoucherService voucherService;
     private final RoomService roomService;
 
     // 1. API Lấy số liệu Dashboard
@@ -202,5 +204,22 @@ public class AdminController {
     public ResponseEntity<String> deleteCinema(@PathVariable Integer id) {
         cinemaService.deleteCinema(id);
         return ResponseEntity.ok("Đã xóa rạp thành công!");
+    }
+    //8. voucher
+    //8.1. Thêm voucher
+    @PostMapping("/vouchers")
+    public ResponseEntity<Voucher> createVoucher(@RequestBody Voucher voucher) {
+        return ResponseEntity.ok(voucherService.createVoucher(voucher));
+    }
+    //8.2. Put voucher
+    @PutMapping("/vouchers/{id}")
+    public ResponseEntity<Voucher> updateVoucher(@PathVariable Integer id, @RequestBody Voucher voucher) {
+        return ResponseEntity.ok(voucherService.updateVoucher(id, voucher));
+    }
+    //8.3. Delete voucher
+    @DeleteMapping("/vouchers/{id}")
+    public ResponseEntity<String> deleteVoucher(@PathVariable Integer id) {
+        voucherService.deleteVoucher(id);
+        return ResponseEntity.ok("Đã xóa voucher thành công!");
     }
 }
