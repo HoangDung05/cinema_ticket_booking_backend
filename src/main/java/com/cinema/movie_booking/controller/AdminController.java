@@ -31,7 +31,6 @@ public class AdminController {
     private final CinemaService cinemaService;
     private final RoomService roomService;
     private final com.cinema.movie_booking.service.VoucherService voucherService;
-
     // 1. API Lấy số liệu Dashboard
     // GET http://localhost:8080/api/admin/stats
     @GetMapping("/stats")

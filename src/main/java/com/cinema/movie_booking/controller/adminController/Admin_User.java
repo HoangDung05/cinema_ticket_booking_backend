@@ -15,8 +15,8 @@ import com.cinema.movie_booking.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 
-@RestController
-@RequestMapping("/admin")
+// @RestController
+// @RequestMapping("/admin")
 @RequiredArgsConstructor
 public class Admin_User {
     private final UserService userService;

@@ -20,4 +20,8 @@ public interface BookingService {
     BookingResponse createBooking(BookingRequest request) throws Exception;
 
     List<BookingHistoryDTO> getUserBookings(String email);
+
+    Booking getBookingById(Integer id) throws Exception;
+
+    void cancelBooking(Integer id) throws Exception;
 }

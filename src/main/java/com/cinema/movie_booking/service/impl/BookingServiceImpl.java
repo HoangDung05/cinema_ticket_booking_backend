@@ -136,6 +136,10 @@ public class BookingServiceImpl implements BookingService {
         newBooking.setShowtime(showtime);
         newBooking.setTotalPrice(totalAmount);
         newBooking.setStatus("PENDING");
+        newBooking.setDiscountAmount(discountAmount);
+        if (usedVoucher != null) {
+            newBooking.setVoucher(usedVoucher);
+        }
         Booking savedBooking = bookingRepository.save(newBooking);
 
         // BƯỚC 5: TẠO BOOKING DETAILS (từng ghế)
@@ -267,5 +271,41 @@ public class BookingServiceImpl implements BookingService {
         long totalCustomers = userRepository.count();
 
         return new AdminStatsDTO(totalRevenue, totalTickets, totalCustomers);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Booking getBookingById(Integer id) throws Exception {
+        return bookingRepository.findById(id)
+                .orElseThrow(() -> new Exception("Không tìm thấy đơn hàng ID: " + id));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelBooking(Integer id) throws Exception {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new Exception("Không tìm thấy đơn hàng ID: " + id));
+
+        if (!"PENDING".equalsIgnoreCase(booking.getStatus())) {
+            throw new Exception("Chỉ có thể hủy đơn đặt vé đang chờ thanh toán.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        // Kiểm tra quá 5 phút mới cho phép hủy (Giải phóng ghế nếu quá thời gian thanh toán)
+        if (now.isBefore(booking.getCreatedAt().plusMinutes(5))) {
+            throw new Exception("Đơn hàng đang trong thời gian thanh toán (5 phút). Vui lòng đợi hết thời gian mới có thể hủy.");
+        }
+
+        booking.setStatus("CANCELLED");
+        bookingRepository.save(booking);
+
+        // Hoàn lại lượt sử dụng voucher nếu trước đó có áp dụng
+        if (booking.getVoucher() != null) {
+            Voucher voucher = booking.getVoucher();
+            if (voucher.getUsedCount() != null && voucher.getUsedCount() > 0) {
+                voucher.setUsedCount(voucher.getUsedCount() - 1);
+                voucherRepository.save(voucher);
+            }
+        }
     }
 }

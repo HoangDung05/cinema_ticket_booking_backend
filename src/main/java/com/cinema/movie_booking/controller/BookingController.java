@@ -40,4 +40,54 @@ public class BookingController {
         }
     }
 
+    // API 5: GET /api/bookings/{id}
+    // Xem chi tiết hóa đơn
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getBookingDetails(@PathVariable Integer id) {
+        try {
+            com.cinema.movie_booking.entity.Booking booking = bookingService.getBookingById(id);
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("id", booking.getId());
+            response.put("status", booking.getStatus());
+            response.put("createdAt", booking.getCreatedAt());
+            response.put("totalPrice", booking.getTotalPrice());
+            response.put("discountAmount", booking.getDiscountAmount());
+            
+            if (booking.getShowtime() != null) {
+                java.util.Map<String, Object> showtimeData = new java.util.HashMap<>();
+                showtimeData.put("startTime", booking.getShowtime().getStartTime());
+                showtimeData.put("movieTitle", booking.getShowtime().getMovie().getTitle());
+                showtimeData.put("posterUrl", booking.getShowtime().getMovie().getPosterUrl());
+                showtimeData.put("roomName", booking.getShowtime().getRoom().getName());
+                showtimeData.put("cinemaName", booking.getShowtime().getRoom().getCinema().getName());
+                response.put("showtime", showtimeData);
+            }
+            
+            java.util.List<String> seats = booking.getBookingDetails().stream()
+                .map(d -> d.getSeat().getSeatNumber())
+                .collect(java.util.stream.Collectors.toList());
+            response.put("seats", seats);
+            
+            if (booking.getVoucher() != null) {
+                response.put("voucherCode", booking.getVoucher().getCode());
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // API 6: DELETE /api/bookings/{id}
+    // Hủy đơn đặt vé (Giải phóng ghế nếu quá thời gian thanh toán)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> cancelBooking(@PathVariable Integer id) {
+        try {
+            bookingService.cancelBooking(id);
+            return ResponseEntity.ok("Đã hủy đơn hàng và giải phóng ghế thành công!");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
