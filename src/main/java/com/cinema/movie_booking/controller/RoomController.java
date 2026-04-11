@@ -1,9 +1,12 @@
 package com.cinema.movie_booking.controller;
 
+import com.cinema.movie_booking.dto.RoomWriteRequest;
 import com.cinema.movie_booking.entity.Room;
 import com.cinema.movie_booking.service.RoomService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -34,5 +37,22 @@ public class RoomController {
         return ResponseEntity.ok(roomService.getRoomById(id));
     }
 
+    @PostMapping
+    public ResponseEntity<Room> createRoom(@RequestBody RoomWriteRequest req) {
+        Room room = new Room();
+        room.setName(req.getName());
+        Room saved = roomService.createRoom(req.getCinemaId(), room);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<Room> updateRoom(@PathVariable Integer id, @RequestBody RoomWriteRequest req) {
+        return ResponseEntity.ok(roomService.updateRoomAdmin(id, req.getName(), req.getCinemaId()));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRoom(@PathVariable Integer id) {
+        roomService.deleteRoom(id);
+        return ResponseEntity.noContent().build();
+    }
 }

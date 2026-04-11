@@ -61,4 +61,32 @@ public class MovieController {
         List<Showtime> showtimes = showtimeService.getShowtimesByMovieId(movieId);
         return ResponseEntity.ok(showtimes);
     }
+
+    // --- Admin CRUD (yêu cầu JWT) ---
+
+    @PostMapping
+    public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
+        movie.setId(null);
+        Movie saved = movieService.saveMovie(movie);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Movie> updateMovie(@PathVariable Integer id, @RequestBody Movie movie) {
+        Movie existing = movieService.getMovieById(id);
+        existing.setTitle(movie.getTitle());
+        existing.setDescription(movie.getDescription());
+        existing.setDuration(movie.getDuration());
+        existing.setReleaseDate(movie.getReleaseDate());
+        existing.setPosterUrl(movie.getPosterUrl());
+        existing.setTrailerUrl(movie.getTrailerUrl());
+        existing.setStatus(movie.getStatus());
+        return ResponseEntity.ok(movieService.saveMovie(existing));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMovie(@PathVariable Integer id) {
+        movieService.deleteMovie(id);
+        return ResponseEntity.noContent().build();
+    }
 }
