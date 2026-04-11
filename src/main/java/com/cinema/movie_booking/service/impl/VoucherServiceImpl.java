@@ -30,7 +30,28 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     @Override
+    public Voucher updateVoucher(Integer id, Voucher incoming) {
+        Voucher existing = voucherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy voucher id: " + id));
+        existing.setCode(incoming.getCode());
+        existing.setDescription(incoming.getDescription());
+        existing.setDiscountType(incoming.getDiscountType());
+        existing.setDiscountValue(incoming.getDiscountValue());
+        existing.setMinOrderValue(incoming.getMinOrderValue());
+        existing.setMaxDiscountAmount(incoming.getMaxDiscountAmount());
+        existing.setStartDate(incoming.getStartDate());
+        existing.setEndDate(incoming.getEndDate());
+        existing.setUsageLimit(incoming.getUsageLimit());
+        existing.setUsedCount(incoming.getUsedCount() != null ? incoming.getUsedCount() : existing.getUsedCount());
+        existing.setStatus(incoming.getStatus());
+        return voucherRepository.save(existing);
+    }
+
+    @Override
     public void deleteVoucher(Integer id) {
+        if (!voucherRepository.existsById(id)) {
+            throw new RuntimeException("Không tìm thấy voucher id: " + id);
+        }
         voucherRepository.deleteById(id);
     }
 

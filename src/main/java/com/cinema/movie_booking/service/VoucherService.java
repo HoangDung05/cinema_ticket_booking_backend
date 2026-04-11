@@ -10,6 +10,8 @@ public interface VoucherService {
 
     Voucher createVoucher(Voucher voucher);
 
+    Voucher updateVoucher(Integer id, Voucher voucher);
+
     void deleteVoucher(Integer id);
 
     Optional<Voucher> getByCode(String code);
