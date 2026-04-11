@@ -45,7 +45,8 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**").permitAll()                   // Swagger UI
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/webjars/**").permitAll()
-                        .requestMatchers("/auth/**").permitAll()                         // Đăng ký / Đăng nhập
+                        .requestMatchers("/auth/**").permitAll()     
+                        // .requestMatchers("/admin/**").permitAll()  // mới sửa để test cho admin                  // Đăng ký / Đăng nhập
                         .requestMatchers(HttpMethod.GET, "/movies/**").permitAll()       // Xem danh sách phim (public)
                         .requestMatchers(HttpMethod.GET, "/showtimes/**").permitAll()    // Xem lịch chiếu (public)
                         .requestMatchers("/bookings/**").permitAll()                     // Đặt vé / Tính giá (TODO: yêu cầu JWT sau)

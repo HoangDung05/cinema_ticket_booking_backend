@@ -9,6 +9,8 @@ public interface VoucherService {
     List<Voucher> getAllVouchers();
 
     Voucher createVoucher(Voucher voucher);
+    Voucher updateVoucher(Integer id, Voucher voucher);
+    Voucher getVoucherById(Integer id);
 
     void deleteVoucher(Integer id);
 
