@@ -26,13 +26,28 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     public Voucher createVoucher(Voucher voucher) {
+        if (voucher.getCode() == null || voucher.getCode().isBlank()) {
+            throw new RuntimeException("Mã voucher không được để trống");
+        }
+        if (voucherRepository.findByCodeIgnoreCase(voucher.getCode().trim()).isPresent()) {
+            throw new RuntimeException("Mã voucher đã tồn tại");
+        }
+        voucher.setCode(voucher.getCode().trim());
         return voucherRepository.save(voucher);
     }
 
     @Override
     public Voucher updateVoucher(Integer id, Voucher voucher) {
         Voucher existingVoucher = getVoucherById(id);
-        existingVoucher.setCode(voucher.getCode());
+        if (voucher.getCode() != null && !voucher.getCode().isBlank()) {
+            String newCode = voucher.getCode().trim();
+            voucherRepository.findByCodeIgnoreCase(newCode).ifPresent(other -> {
+                if (!other.getId().equals(id)) {
+                    throw new RuntimeException("Mã voucher đã tồn tại");
+                }
+            });
+            existingVoucher.setCode(newCode);
+        }
         existingVoucher.setDescription(voucher.getDescription());
         existingVoucher.setDiscountType(voucher.getDiscountType());
         existingVoucher.setDiscountValue(voucher.getDiscountValue());
@@ -51,6 +66,9 @@ public class VoucherServiceImpl implements VoucherService {
     }
     @Override
     public void deleteVoucher(Integer id) {
+        if (!voucherRepository.existsById(id)) {
+            throw new RuntimeException("Không tìm thấy voucher id: " + id);
+        }
         voucherRepository.deleteById(id);
     }
 
