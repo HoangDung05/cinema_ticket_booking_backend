@@ -7,6 +7,7 @@ import com.cinema.movie_booking.entity.Showtime;
 import com.cinema.movie_booking.repository.BookingDetailRepository;
 import com.cinema.movie_booking.repository.SeatRepository;
 import com.cinema.movie_booking.repository.ShowtimeRepository;
+import com.cinema.movie_booking.service.PendingBookingExpirationService;
 import com.cinema.movie_booking.service.ShowtimeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final ShowtimeRepository showtimeRepository;
     private final SeatRepository seatRepository;
     private final BookingDetailRepository bookingDetailRepository;
+    private final PendingBookingExpirationService pendingBookingExpirationService;
 
     // 1. Lấy suất chiếu theo phim (còn sắp chiếu) - legacy entity
     @Override
@@ -55,6 +57,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     @Override
     @Transactional(readOnly = true)
     public List<SeatStatusDTO> getSeatsByShowtimeId(Integer showtimeId) {
+        pendingBookingExpirationService.expireStalePendingBookings();
+
         Showtime showtime = showtimeRepository.findById(showtimeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy suất chiếu ID: " + showtimeId));
 

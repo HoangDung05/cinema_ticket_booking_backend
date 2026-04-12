@@ -7,6 +7,7 @@ import com.cinema.movie_booking.dto.BookingHistoryDTO;
 import com.cinema.movie_booking.dto.PriceCalculateRequest;
 import com.cinema.movie_booking.dto.PriceCalculateResponse;
 import com.cinema.movie_booking.service.BookingService;
+import com.cinema.movie_booking.service.PendingBookingExpirationService;
 import com.cinema.movie_booking.entity.*;
 import com.cinema.movie_booking.repository.*;
 
@@ -31,6 +32,8 @@ public class BookingServiceImpl implements BookingService {
     private final VoucherRepository voucherRepository;
     private final UserRepository userRepository;
     private final SeatRepository seatRepository;
+    private final PaymentRepository paymentRepository;
+    private final PendingBookingExpirationService pendingBookingExpirationService;
 
     // ----------------------------------------------------------------
     // API 3: POST /api/bookings/calculate-price
@@ -81,21 +84,19 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // ----------------------------------------------------------------
-    // API 4: POST /api/bookings
-    // Chốt đơn: lưu DB, khóa ghế, trừ voucher, chặn race condition
+    // BƯỚC 1: KHÓA GHẾ (HOLD) - Tạo Booking PENDING
     // ----------------------------------------------------------------
     @Transactional(rollbackFor = Exception.class)
-    public BookingResponse createBooking(BookingRequest request) throws Exception {
+    public BookingResponse holdBooking(BookingRequest request) throws Exception {
 
-        // BƯỚC 1: Load User & Showtime
+        pendingBookingExpirationService.expireStalePendingBookings();
+
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new Exception("Không tìm thấy người dùng!"));
 
         Showtime showtime = showtimeRepository.findById(request.getShowtimeId())
                 .orElseThrow(() -> new Exception("Không tìm thấy suất chiếu!"));
 
-        // BƯỚC 2: CHECK TRÙNG GHẾ (race condition protection)
-        // existsByShowtimeIdAndSeatIdIn sẽ dùng SELECT FOR UPDATE ngầm trong transaction
         boolean isSeatTaken = bookingDetailRepository.existsByShowtimeIdAndSeatIdIn(
                 request.getShowtimeId(),
                 request.getSeatIds()
@@ -104,45 +105,17 @@ public class BookingServiceImpl implements BookingService {
             throw new Exception("Ghế bạn chọn đã có người đặt. Vui lòng chọn ghế khác!");
         }
 
-        // BƯỚC 3: TÍNH TIỀN (giống calculatePrice nhưng trong cùng transaction)
         BigDecimal pricePerSeat = showtime.getPrice();
         BigDecimal subtotal = pricePerSeat.multiply(BigDecimal.valueOf(request.getSeatIds().size()));
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        Voucher usedVoucher = null;
 
-        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
-            usedVoucher = findValidVoucher(request.getVoucherCode());
-
-            // Kiểm tra usage limit
-            if (usedVoucher.getUsageLimit() != null
-                    && usedVoucher.getUsedCount() >= usedVoucher.getUsageLimit()) {
-                throw new Exception("Mã giảm giá đã hết lượt sử dụng!");
-            }
-
-            // Kiểm tra đơn hàng tối thiểu
-            if (usedVoucher.getMinOrderValue() != null
-                    && subtotal.compareTo(usedVoucher.getMinOrderValue()) < 0) {
-                throw new Exception("Đơn hàng phải đạt tối thiểu " + usedVoucher.getMinOrderValue() + "đ!");
-            }
-
-            discountAmount = computeDiscount(usedVoucher, subtotal);
-        }
-
-        BigDecimal totalAmount = subtotal.subtract(discountAmount).max(BigDecimal.ZERO);
-
-        // BƯỚC 4: TẠO BOOKING
         Booking newBooking = new Booking();
         newBooking.setUser(user);
         newBooking.setShowtime(showtime);
-        newBooking.setTotalPrice(totalAmount);
+        newBooking.setTotalPrice(subtotal); // Giá gốc lúc hold
         newBooking.setStatus("PENDING");
-        newBooking.setDiscountAmount(discountAmount);
-        if (usedVoucher != null) {
-            newBooking.setVoucher(usedVoucher);
-        }
+        newBooking.setDiscountAmount(BigDecimal.ZERO);
         Booking savedBooking = bookingRepository.save(newBooking);
 
-        // BƯỚC 5: TẠO BOOKING DETAILS (từng ghế)
         List<BookingDetail> details = new ArrayList<>();
         for (Integer seatId : request.getSeatIds()) {
             Seat seat = seatRepository.findById(seatId)
@@ -157,16 +130,70 @@ public class BookingServiceImpl implements BookingService {
         }
         bookingDetailRepository.saveAll(details);
 
-        // BƯỚC 6: TRỪ SỐ LẦN DÙNG VOUCHER
-        if (usedVoucher != null) {
+        return new BookingResponse(
+                savedBooking.getId(),
+                "Khóa ghế thành công. Vui lòng thanh toán trong "
+                        + PendingBookingExpirationService.PENDING_PAYMENT_DEADLINE_MINUTES + " phút.",
+                subtotal
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // BƯỚC 2: THANH TOÁN (PAY) - Xử lý Voucher và Thanh toán
+    // ----------------------------------------------------------------
+    @Transactional(rollbackFor = Exception.class)
+    public BookingResponse payBooking(Integer bookingId, com.cinema.movie_booking.dto.PayBookingRequest request) throws Exception {
+        pendingBookingExpirationService.expireStalePendingBookings();
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new Exception("Không tìm thấy đơn hàng ID: " + bookingId));
+
+        if (!"PENDING".equalsIgnoreCase(booking.getStatus())) {
+            throw new Exception("Đơn hàng này không ở trạng thái chờ thanh toán!");
+        }
+
+        // Tạm tính giá
+        BigDecimal subtotal = booking.getTotalPrice();
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Voucher usedVoucher = null;
+
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
+            usedVoucher = findValidVoucher(request.getVoucherCode());
+
+            if (usedVoucher.getUsageLimit() != null
+                    && usedVoucher.getUsedCount() >= usedVoucher.getUsageLimit()) {
+                throw new Exception("Mã giảm giá đã hết lượt sử dụng!");
+            }
+
+            if (usedVoucher.getMinOrderValue() != null
+                    && subtotal.compareTo(usedVoucher.getMinOrderValue()) < 0) {
+                throw new Exception("Đơn hàng phải đạt tối thiểu " + usedVoucher.getMinOrderValue() + "đ!");
+            }
+
+            discountAmount = computeDiscount(usedVoucher, subtotal);
+            booking.setVoucher(usedVoucher);
+            booking.setDiscountAmount(discountAmount);
+
             usedVoucher.setUsedCount(usedVoucher.getUsedCount() + 1);
             voucherRepository.save(usedVoucher);
         }
 
+        BigDecimal finalTotal = subtotal.subtract(discountAmount).max(BigDecimal.ZERO);
+        booking.setTotalPrice(finalTotal);
+        booking.setStatus("PAID");
+        bookingRepository.save(booking);
+
+        Payment payment = new Payment();
+        payment.setAmount(finalTotal);
+        payment.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "MOMO");
+        payment.setStatus("SUCCESS");
+        payment.setBooking(booking);
+        paymentRepository.save(payment);
+
         return new BookingResponse(
-                savedBooking.getId(),
-                "Đặt vé thành công! Vui lòng tiến hành thanh toán.",
-                totalAmount
+                booking.getId(),
+                "Thanh toán hoàn tất!",
+                finalTotal
         );
     }
 
@@ -175,11 +202,15 @@ public class BookingServiceImpl implements BookingService {
     // ----------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<BookingHistoryDTO> getUserBookings(String email) {
+        pendingBookingExpirationService.expireStalePendingBookings();
+
         List<Booking> bookings = bookingRepository.findByUserEmail(email);
         List<BookingHistoryDTO> result = new ArrayList<>();
 
         for (Booking b : bookings) {
             String movieTitle = b.getShowtime().getMovie().getTitle();
+            Integer movieDuration = b.getShowtime().getMovie().getDuration();
+            String posterUrl = b.getShowtime().getMovie().getPosterUrl();
             String cinemaName = b.getShowtime().getRoom().getCinema().getName();
 
             List<BookingDetail> details = bookingDetailRepository.findByBookingId(b.getId());
@@ -191,11 +222,14 @@ public class BookingServiceImpl implements BookingService {
             result.add(new BookingHistoryDTO(
                     b.getId(),
                     movieTitle,
+                    movieDuration,
+                    posterUrl,
                     cinemaName,
                     b.getShowtime().getStartTime(),
                     b.getTotalPrice(),
                     b.getStatus(),
-                    String.join(", ", seatNames)
+                    String.join(", ", seatNames),
+                    b.getCreatedAt()
             ));
         }
         return result;
@@ -288,12 +322,6 @@ public class BookingServiceImpl implements BookingService {
 
         if (!"PENDING".equalsIgnoreCase(booking.getStatus())) {
             throw new Exception("Chỉ có thể hủy đơn đặt vé đang chờ thanh toán.");
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        // Kiểm tra quá 5 phút mới cho phép hủy (Giải phóng ghế nếu quá thời gian thanh toán)
-        if (now.isBefore(booking.getCreatedAt().plusMinutes(5))) {
-            throw new Exception("Đơn hàng đang trong thời gian thanh toán (5 phút). Vui lòng đợi hết thời gian mới có thể hủy.");
         }
 
         booking.setStatus("CANCELLED");

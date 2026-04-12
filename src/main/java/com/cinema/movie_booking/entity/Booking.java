@@ -26,9 +26,16 @@ public class Booking {
     @Column(name = "status", columnDefinition = "ENUM('PENDING', 'PAID', 'CANCELLED')")
     private String status = "PENDING"; // Default value
 
-    // Tự động gán thời gian hiện tại nếu chưa có
-    @Column(name = "created_at", insertable = false, updatable = false)
+    /** Ghi nhận thời điểm tạo đơn — dùng cho hết hạn PENDING (2 phút) và đếm ngược trên client */
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    void fillCreatedAtIfMissing() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

@@ -17,7 +17,9 @@ public interface BookingService {
 
     PriceCalculateResponse calculatePrice(PriceCalculateRequest request) throws Exception;
 
-    BookingResponse createBooking(BookingRequest request) throws Exception;
+    BookingResponse holdBooking(BookingRequest request) throws Exception;
+
+    BookingResponse payBooking(Integer bookingId, com.cinema.movie_booking.dto.PayBookingRequest request) throws Exception;
 
     List<BookingHistoryDTO> getUserBookings(String email);
 

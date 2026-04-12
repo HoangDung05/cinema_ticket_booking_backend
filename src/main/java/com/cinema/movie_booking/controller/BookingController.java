@@ -28,12 +28,24 @@ public class BookingController {
         }
     }
 
-    // API 4: POST /api/bookings
-    // Chốt đơn: lưu DB, khóa ghế, trừ voucher, chặn 2 người đặt cùng ghế
-    @PostMapping
-    public ResponseEntity<?> createBooking(@RequestBody BookingRequest request) {
+    // API 4: POST /api/bookings/hold
+    // Nhận chỗ: lưu DB trạng thái PENDING, khóa ghế
+    @PostMapping("/hold")
+    public ResponseEntity<?> holdBooking(@RequestBody BookingRequest request) {
         try {
-            BookingResponse response = bookingService.createBooking(request);
+            BookingResponse response = bookingService.holdBooking(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // API 4.5: POST /api/bookings/{id}/pay
+    // Thanh toán: xác nhận thẻ/momo, áp dụng voucher, đổi PENDING -> PAID
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<?> payBooking(@PathVariable Integer id, @RequestBody com.cinema.movie_booking.dto.PayBookingRequest request) {
+        try {
+            BookingResponse response = bookingService.payBooking(id, request);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
