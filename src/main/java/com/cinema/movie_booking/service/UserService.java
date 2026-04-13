@@ -27,4 +27,6 @@ public interface UserService {
     /** Đổi role (CUSTOMER <-> ADMIN) */
     User updateUserRole(Integer id, String roleName);
 
+    void changePassword(String email, String currentPassword, String newPassword);
+
 }

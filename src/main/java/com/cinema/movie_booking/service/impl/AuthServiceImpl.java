@@ -40,6 +40,16 @@ public class AuthServiceImpl {
 
     @Transactional(rollbackFor = Exception.class)
     public String registerUser(RegisterRequest request) throws Exception {
+        String phone = request.getPhone() != null ? request.getPhone().trim() : "";
+        String password = request.getPassword() != null ? request.getPassword() : "";
+
+        if (!phone.matches("\\d{10}")) {
+            throw new Exception("Số điện thoại phải gồm đúng 10 chữ số.");
+        }
+        if (password.length() < 6) {
+            throw new Exception("Mật khẩu phải có ít nhất 6 ký tự.");
+        }
+
         // 1. Kiểm tra Email đã tồn tại chưa
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new Exception("Email này đã được sử dụng!");
@@ -56,9 +66,9 @@ public class AuthServiceImpl {
         // 3. Tạo User mới và Mã hóa mật khẩu
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword())); // Mật khẩu bị băm nát ở đây
+        user.setPassword(passwordEncoder.encode(password)); // Mật khẩu bị băm nát ở đây
         user.setFullName(request.getFullName());
-        user.setPhone(request.getPhone());
+        user.setPhone(phone);
         user.setRole(userRole);
 
         // 4. Lưu xuống Database

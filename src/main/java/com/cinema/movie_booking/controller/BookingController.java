@@ -69,8 +69,10 @@ public class BookingController {
             
             if (booking.getShowtime() != null) {
                 java.util.Map<String, Object> showtimeData = new java.util.HashMap<>();
+                showtimeData.put("showtimeId", booking.getShowtime().getId());
                 showtimeData.put("startTime", booking.getShowtime().getStartTime());
                 showtimeData.put("movieTitle", booking.getShowtime().getMovie().getTitle());
+                showtimeData.put("movieDuration", booking.getShowtime().getMovie().getDuration());
                 showtimeData.put("posterUrl", booking.getShowtime().getMovie().getPosterUrl());
                 showtimeData.put("roomName", booking.getShowtime().getRoom().getName());
                 showtimeData.put("cinemaName", booking.getShowtime().getRoom().getCinema().getName());
@@ -81,6 +83,15 @@ public class BookingController {
                 .map(d -> d.getSeat().getSeatNumber())
                 .collect(java.util.stream.Collectors.toList());
             response.put("seats", seats);
+            java.util.List<java.util.Map<String, Object>> seatDetails = booking.getBookingDetails().stream()
+                .map(d -> {
+                    java.util.Map<String, Object> seat = new java.util.HashMap<>();
+                    seat.put("id", d.getSeat().getId());
+                    seat.put("seatNumber", d.getSeat().getSeatNumber());
+                    return seat;
+                })
+                .collect(java.util.stream.Collectors.toList());
+            response.put("seatDetails", seatDetails);
             
             if (booking.getVoucher() != null) {
                 response.put("voucherCode", booking.getVoucher().getCode());

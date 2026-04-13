@@ -8,6 +8,7 @@ import com.cinema.movie_booking.repository.RoleRepository;
 import com.cinema.movie_booking.repository.UserRepository;
 import com.cinema.movie_booking.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +16,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public List<User> getAllUsers() {
@@ -48,6 +50,7 @@ public class UserServiceImpl implements UserService {
         // 2. CẬP NHẬT CÁC TRƯỜNG CHUNG (Cả User và Admin đều sửa được)
         user.setFullName(userDetails.getFullName());
         user.setPhone(userDetails.getPhone());
+        user.setAvatarUrl(userDetails.getAvatarUrl());
 
         // 3. KHÔNG CHO PHÉP SỬA EMAIL
 
@@ -101,6 +104,7 @@ public class UserServiceImpl implements UserService {
         // Chỉ cập nhật những trường cần thiết
         user.setFullName(userDetails.getFullName());
         user.setPhone(userDetails.getPhone());
+        user.setAvatarUrl(userDetails.getAvatarUrl());
         // Không nên cho sửa email ở đây vì email là unique, nếu muốn sửa phải check
         // trùng
 
@@ -126,6 +130,24 @@ public class UserServiceImpl implements UserService {
 
         user.setRole(role);
         return userRepository.save(user);
+    }
+
+    @Override
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+
+        if (currentPassword == null || currentPassword.isBlank()) {
+            throw new RuntimeException("Vui lòng nhập mật khẩu hiện tại.");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new RuntimeException("Mật khẩu mới phải có ít nhất 6 ký tự.");
+        }
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Mật khẩu hiện tại không đúng.");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
 }
