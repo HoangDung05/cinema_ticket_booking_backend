@@ -2,6 +2,7 @@ package com.cinema.movie_booking.controller;
 
 import com.cinema.movie_booking.dto.BookingRequest;
 import com.cinema.movie_booking.dto.BookingResponse;
+import com.cinema.movie_booking.dto.PayBookingRequest;
 import com.cinema.movie_booking.dto.PriceCalculateRequest;
 import com.cinema.movie_booking.dto.PriceCalculateResponse;
 import com.cinema.movie_booking.service.BookingService;
@@ -43,7 +44,7 @@ public class BookingController {
     // API 4.5: POST /api/bookings/{id}/pay
     // Thanh toán: xác nhận thẻ/momo, áp dụng voucher, đổi PENDING -> PAID
     @PostMapping("/{id}/pay")
-    public ResponseEntity<?> payBooking(@PathVariable Integer id, @RequestBody com.cinema.movie_booking.dto.PayBookingRequest request) {
+    public ResponseEntity<?> payBooking(@PathVariable Integer id, @RequestBody PayBookingRequest request) {
         try {
             BookingResponse response = bookingService.payBooking(id, request);
             return ResponseEntity.ok(response);

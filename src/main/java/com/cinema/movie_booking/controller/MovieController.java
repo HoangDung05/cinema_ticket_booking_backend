@@ -1,8 +1,8 @@
 package com.cinema.movie_booking.controller;
 
+import com.cinema.movie_booking.dto.ShowtimeDTO;
 import com.cinema.movie_booking.entity.Movie;
 import com.cinema.movie_booking.entity.MovieStatus;
-import com.cinema.movie_booking.entity.Showtime;
 import com.cinema.movie_booking.service.MovieService;
 import com.cinema.movie_booking.service.ShowtimeService;
 
@@ -57,8 +57,8 @@ public class MovieController {
 
     // Lấy các suất chiếu của một bộ phim cụ thể (Để vẽ bảng chọn giờ cho khách)
     @GetMapping("/{movieId}/showtimes")
-    public ResponseEntity<List<Showtime>> getShowtimesByMovie(@PathVariable Integer movieId) {
-        List<Showtime> showtimes = showtimeService.getShowtimesByMovieId(movieId);
+    public ResponseEntity<List<ShowtimeDTO>> getShowtimesByMovie(@PathVariable Integer movieId) {
+        List<ShowtimeDTO> showtimes = showtimeService.getShowtimeDTOsByMovieId(movieId);
         return ResponseEntity.ok(showtimes);
     }
 

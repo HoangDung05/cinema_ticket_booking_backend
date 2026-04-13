@@ -12,6 +12,7 @@ import com.cinema.movie_booking.entity.*;
 import com.cinema.movie_booking.repository.*;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,8 +20,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -91,6 +93,14 @@ public class BookingServiceImpl implements BookingService {
 
         pendingBookingExpirationService.expireStalePendingBookings();
 
+        if (request.getSeatIds() == null || request.getSeatIds().isEmpty()) {
+            throw new Exception("Chưa chọn ghế nào!");
+        }
+        Set<Integer> uniqueSeatIds = new HashSet<>(request.getSeatIds());
+        if (uniqueSeatIds.size() != request.getSeatIds().size()) {
+            throw new Exception("Danh sách ghế bị trùng. Vui lòng chọn lại ghế!");
+        }
+
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new Exception("Không tìm thấy người dùng!"));
 
@@ -117,7 +127,7 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(newBooking);
 
         List<BookingDetail> details = new ArrayList<>();
-        for (Integer seatId : request.getSeatIds()) {
+        for (Integer seatId : uniqueSeatIds) {
             Seat seat = seatRepository.findById(seatId)
                     .orElseThrow(() -> new Exception("Không tìm thấy ghế ID: " + seatId));
 
@@ -128,7 +138,11 @@ public class BookingServiceImpl implements BookingService {
             detail.setPriceAtBooking(pricePerSeat);
             details.add(detail);
         }
-        bookingDetailRepository.saveAll(details);
+        try {
+            bookingDetailRepository.saveAll(details);
+        } catch (DataIntegrityViolationException e) {
+            throw new Exception("Ghế bạn chọn vừa có người khác giữ. Vui lòng tải lại và chọn ghế khác!");
+        }
 
         return new BookingResponse(
                 savedBooking.getId(),
