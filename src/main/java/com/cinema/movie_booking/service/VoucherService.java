@@ -4,10 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import com.cinema.movie_booking.entity.Voucher;
+import com.cinema.movie_booking.repository.VoucherRepository;
 
 public interface VoucherService {
-    List<Voucher> getAllVouchers();
-
+//    List<Voucher> getAllVouchers();
+    List<Voucher> getAllVouchers() {
+        return VoucherRepository.findAll(); // Phải có dòng return này
+    }
     Voucher createVoucher(Voucher voucher);
     Voucher updateVoucher(Integer id, Voucher voucher);
     Voucher getVoucherById(Integer id);

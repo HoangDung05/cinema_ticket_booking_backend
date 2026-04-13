@@ -19,6 +19,7 @@ import com.cinema.movie_booking.service.VoucherService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.w3c.dom.stylesheets.LinkStyle;
 
 @RestController
 @RequestMapping("/admin")
@@ -202,6 +203,10 @@ public class AdminController {
         return ResponseEntity.ok("Đã xóa rạp thành công!");
     }
     //8. voucher
+    @GetMapping("/vouchers")
+    public ResponseEntity<?> getAllVouchers() {
+        return ResponseEntity.ok(voucherService.getAllVouchers());
+    }
     //8.1. Thêm voucher
     @PostMapping("/vouchers")
     public ResponseEntity<Voucher> createVoucher(@RequestBody Voucher voucher) {
@@ -218,4 +223,5 @@ public class AdminController {
         voucherService.deleteVoucher(id);
         return ResponseEntity.ok("Đã xóa voucher thành công!");
     }
+
 }
