@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,6 +22,7 @@ public class User {
     private String email;
 
     @Column(name = "password", nullable = false)
+    @JsonIgnore
     private String password;
 
     @Column(name = "full_name", length = 100)

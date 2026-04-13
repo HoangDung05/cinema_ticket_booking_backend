@@ -11,8 +11,16 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.util.List;
 
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
@@ -46,11 +54,19 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/webjars/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()     
-                        // .requestMatchers("/admin/**").permitAll()  // mới sửa để test cho admin                  // Đăng ký / Đăng nhập
-                        .requestMatchers(HttpMethod.GET, "/movies/**").permitAll()       // Xem danh sách phim (public)
-                        .requestMatchers(HttpMethod.GET, "/showtimes/**").permitAll()    // Xem lịch chiếu (public)
-                        .requestMatchers("/bookings/**").permitAll()                     // Đặt vé / Tính giá (TODO: yêu cầu JWT sau)
+                        .requestMatchers(HttpMethod.GET, "/admin/vouchers").permitAll()  // Vouchers GET (public)
+                        .requestMatchers("/admin/vouchers/**").permitAll()               // Vouchers POST/PUT/DELETE (public)
+                        .requestMatchers(HttpMethod.GET, "/admin/bookings").permitAll()  // Bookings GET (public)
+                        .requestMatchers(HttpMethod.GET, "/movies/**").permitAll()       // Phim (public)
+                        .requestMatchers(HttpMethod.GET, "/showtimes/**").permitAll()    // Lịch chiếu (public)
+                        .requestMatchers("/rooms/**").permitAll()                        // Phòng - tất cả methods (public)
+                        .requestMatchers("/bookings/**").permitAll()                     // Đặt vé / Tính giá (public)
+                        .requestMatchers("/admin/**").hasRole("ADMIN")                    // Quản lý khác (cần ADMIN)
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(restAuthenticationEntryPoint())
+                        .accessDeniedHandler(restAccessDeniedHandler())
                 )
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
@@ -58,5 +74,36 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    @Bean
+    public AuthenticationEntryPoint restAuthenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Unauthorized\"}");
+        };
+    }
+
+    @Bean
+    public AccessDeniedHandler restAccessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Forbidden\"}");
+        };
     }
 }

@@ -2,7 +2,9 @@ package com.cinema.movie_booking.service.impl;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
+import com.cinema.movie_booking.entity.Role;
 import com.cinema.movie_booking.entity.User;
+import com.cinema.movie_booking.repository.RoleRepository;
 import com.cinema.movie_booking.repository.UserRepository;
 import com.cinema.movie_booking.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
     @Override
     public List<User> getAllUsers() {
@@ -101,6 +104,27 @@ public class UserServiceImpl implements UserService {
         // Không nên cho sửa email ở đây vì email là unique, nếu muốn sửa phải check
         // trùng
 
+        return userRepository.save(user);
+    }
+
+    @Override
+    public User updateUserRole(Integer id, String roleName) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy User ID: " + id));
+
+        String normalized = roleName == null ? "" : roleName.trim().toUpperCase();
+        if (!normalized.equals("ADMIN") && !normalized.equals("CUSTOMER")) {
+            throw new RuntimeException("Role không hợp lệ! Chỉ được dùng ADMIN hoặc CUSTOMER");
+        }
+
+        Role role = roleRepository.findByName(normalized)
+                .orElseGet(() -> {
+                    Role r = new Role();
+                    r.setName(normalized);
+                    return roleRepository.save(r);
+                });
+
+        user.setRole(role);
         return userRepository.save(user);
     }
 
