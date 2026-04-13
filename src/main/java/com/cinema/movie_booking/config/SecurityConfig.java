@@ -58,7 +58,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/vouchers/**").permitAll()               // Vouchers POST/PUT/DELETE (public)
                         .requestMatchers(HttpMethod.GET, "/admin/bookings").permitAll()  // Bookings GET (public)
                         .requestMatchers(HttpMethod.GET, "/movies/**").permitAll()       // Phim (public)
-                        .requestMatchers(HttpMethod.GET, "/showtimes/**").permitAll()    // Lịch chiếu (public)
+                        .requestMatchers(HttpMethod.GET, "/showtimes", "/showtimes/**").permitAll()    // Lịch chiếu (public)
                         .requestMatchers("/rooms/**").permitAll()                        // Phòng - tất cả methods (public)
                         .requestMatchers("/bookings/**").permitAll()                     // Đặt vé / Tính giá (public)
                         .requestMatchers("/admin/**").hasRole("ADMIN")                    // Quản lý khác (cần ADMIN)

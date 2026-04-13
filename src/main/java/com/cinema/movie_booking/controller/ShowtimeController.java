@@ -1,8 +1,6 @@
 package com.cinema.movie_booking.controller;
 
-import com.cinema.movie_booking.dto.SeatStatusDTO;
-import com.cinema.movie_booking.dto.ShowtimeDTO;
-import com.cinema.movie_booking.entity.Showtime;
+import com.cinema.movie_booking.dto.AdminShowtimeDTO;
 import com.cinema.movie_booking.service.ShowtimeService;
 import lombok.RequiredArgsConstructor;
 
@@ -10,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -20,8 +19,21 @@ public class ShowtimeController {
 
     // Lấy tất cả suất chiếu
     @GetMapping
-    public ResponseEntity<List<Showtime>> getAll() {
-        return ResponseEntity.ok(showtimeService.getAllShowtimes());
+    public ResponseEntity<List<AdminShowtimeDTO>> getAll() {
+        List<AdminShowtimeDTO> data = showtimeService.getAllShowtimes().stream()
+                .map(showtime -> new AdminShowtimeDTO(
+                        showtime.getId(),
+                        showtime.getStartTime(),
+                        showtime.getPrice(),
+                        new AdminShowtimeDTO.MovieInfo(
+                                showtime.getMovie().getId(),
+                                showtime.getMovie().getTitle(),
+                                showtime.getMovie().getDuration()),
+                        new AdminShowtimeDTO.RoomInfo(
+                                showtime.getRoom().getId(),
+                                showtime.getRoom().getName())))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(data);
     }
 
     // Lấy 1 xuất chiếu

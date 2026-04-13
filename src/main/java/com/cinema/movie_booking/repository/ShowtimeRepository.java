@@ -10,6 +10,7 @@ import java.util.List;
 @Repository
 public interface ShowtimeRepository extends JpaRepository<Showtime, Integer> {
         List<Showtime> findByMovieId(Integer movieId);
+        List<Showtime> findByRoomId(Integer roomId);
 
         // 1. Tìm suất chiếu theo phim và thời gian bắt đầu sau thời điểm 'now'
         // Giúp khách hàng không thấy các suất đã chiếu xong

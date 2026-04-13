@@ -20,10 +20,8 @@ import com.cinema.movie_booking.service.VoucherService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.w3c.dom.stylesheets.LinkStyle;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/admin")
@@ -130,8 +128,7 @@ public class AdminController {
     }
 
     // 4. Showtimes
-
-    // 4.2 thêm
+    // 4.1 thêm
     @PostMapping("/showtimes")
     public ResponseEntity<?> createShowtime(@RequestBody Showtime showtime) {
         try {

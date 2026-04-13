@@ -5,6 +5,8 @@ import com.cinema.movie_booking.dto.ShowtimeDTO;
 import com.cinema.movie_booking.entity.Seat;
 import com.cinema.movie_booking.entity.Showtime;
 import com.cinema.movie_booking.repository.BookingDetailRepository;
+import com.cinema.movie_booking.repository.MovieRepository;
+import com.cinema.movie_booking.repository.RoomRepository;
 import com.cinema.movie_booking.repository.SeatRepository;
 import com.cinema.movie_booking.repository.ShowtimeRepository;
 import com.cinema.movie_booking.service.PendingBookingExpirationService;
@@ -26,6 +28,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final SeatRepository seatRepository;
     private final BookingDetailRepository bookingDetailRepository;
     private final PendingBookingExpirationService pendingBookingExpirationService;
+    private final MovieRepository movieRepository;
+    private final RoomRepository roomRepository;
 
     // 1. Lấy suất chiếu theo phim (còn sắp chiếu) - legacy entity
     @Override
@@ -89,6 +93,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     // 5. Admin: Thêm suất chiếu mới
     @Override
     public Showtime createShowtime(Showtime showtime) {
+        validateShowtime(showtime, null);
         return showtimeRepository.save(showtime);
     }
 
@@ -110,6 +115,12 @@ public class ShowtimeServiceImpl implements ShowtimeService {
             existing.setRoom(details.getRoom());
         }
 
+        if (details.getMovie() != null && details.getMovie().getId() != null) {
+            existing.setMovie(details.getMovie());
+        }
+
+        validateShowtime(existing, id);
+
         // 3. Lưu lại đối tượng đã cập nhật
         return showtimeRepository.save(existing);
     }
@@ -128,5 +139,47 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     @Override
     public List<Showtime> getShowtimesByMovieId(Integer movieId) {
         return showtimeRepository.findByMovieId(movieId);
+    }
+
+    private void validateShowtime(Showtime showtime, Integer currentShowtimeId) {
+        Integer movieId = showtime.getMovie() != null ? showtime.getMovie().getId() : null;
+        Integer roomId = showtime.getRoom() != null ? showtime.getRoom().getId() : null;
+
+        if (movieId == null) {
+            throw new RuntimeException("Vui lòng chọn phim cho suất chiếu.");
+        }
+        if (roomId == null) {
+            throw new RuntimeException("Vui lòng chọn phòng cho suất chiếu.");
+        }
+        if (showtime.getStartTime() == null) {
+            throw new RuntimeException("Vui lòng chọn thời gian bắt đầu.");
+        }
+        Integer movieDuration = movieRepository.findById(movieId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phim đã chọn."))
+                .getDuration();
+        if (movieDuration == null || movieDuration <= 0) {
+            throw new RuntimeException("Thời lượng phim không hợp lệ để tạo suất chiếu.");
+        }
+        roomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng đã chọn."));
+
+        LocalDateTime newStart = showtime.getStartTime();
+        LocalDateTime newEnd = newStart.plusMinutes(movieDuration);
+
+        List<Showtime> sameRoomShowtimes = showtimeRepository.findByRoomId(roomId);
+        boolean hasOverlap = sameRoomShowtimes.stream()
+                .filter(existing -> currentShowtimeId == null || !existing.getId().equals(currentShowtimeId))
+                .anyMatch(existing -> {
+                    if (existing.getMovie() == null || existing.getMovie().getDuration() == null) {
+                        return false;
+                    }
+                    LocalDateTime existingStart = existing.getStartTime();
+                    LocalDateTime existingEnd = existingStart.plusMinutes(existing.getMovie().getDuration());
+                    return newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart);
+                });
+
+        if (hasOverlap) {
+            throw new RuntimeException("Khung giờ chiếu bị trùng với suất chiếu khác trong cùng phòng.");
+        }
     }
 }
