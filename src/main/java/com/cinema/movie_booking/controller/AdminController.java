@@ -7,6 +7,7 @@ import com.cinema.movie_booking.entity.Room;
 import com.cinema.movie_booking.entity.Showtime;
 import com.cinema.movie_booking.entity.User;
 import com.cinema.movie_booking.entity.Voucher;
+import com.cinema.movie_booking.entity.Booking;
 import com.cinema.movie_booking.service.BookingService;
 import com.cinema.movie_booking.service.CinemaService;
 import com.cinema.movie_booking.service.MovieService;
@@ -20,6 +21,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.w3c.dom.stylesheets.LinkStyle;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/admin")
@@ -45,7 +49,38 @@ public class AdminController {
     // GET http://localhost:8080/api/admin/bookings
     @GetMapping("/bookings")
     public ResponseEntity<?> getAllBookings() {
-        return ResponseEntity.ok(bookingService.getAllBookingsForAdmin());
+        try {
+            List<Booking> bookings = bookingService.getAllBookingsForAdmin();
+            
+            // Transform Booking -> AdminBookingDTO
+            java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+            
+            for (Booking b : bookings) {
+                java.util.Map<String, Object> dto = new java.util.HashMap<>();
+                dto.put("bookingId", b.getId());
+                dto.put("userEmail", b.getUser() != null ? b.getUser().getEmail() : "—");
+                dto.put("userName", b.getUser() != null ? b.getUser().getFullName() : "—");
+                dto.put("movieTitle", b.getShowtime() != null && b.getShowtime().getMovie() != null 
+                    ? b.getShowtime().getMovie().getTitle() : "—");
+                dto.put("showtimeStart", b.getShowtime() != null ? b.getShowtime().getStartTime() : null);
+                
+                // Tập hợp tên ghế (A1, A2, B1, ...)
+                String seatNames = b.getBookingDetails().stream()
+                    .map(detail -> detail.getSeat().getSeatNumber())
+                    .collect(java.util.stream.Collectors.joining(", "));
+                dto.put("seatNames", seatNames);
+                
+                dto.put("totalPrice", b.getTotalPrice());
+                dto.put("status", b.getStatus());
+                dto.put("createdAt", b.getCreatedAt());
+                
+                result.add(dto);
+            }
+            
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi khi lấy danh sách bookings: " + e.getMessage());
+        }
     }
 
     // 3. API Quản lý danh sách khách hàng (như đã làm ở bước trước)
@@ -74,7 +109,13 @@ public class AdminController {
         return ResponseEntity.ok("Đã xóa khách hàng ID: " + id);
     }
 
-    // 3.4. Khóa tài khoản
+    // 3.4. Đổi quyền (CUSTOMER <-> ADMIN)
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<?> changeUserRole(@PathVariable Integer id, @RequestParam String role) {
+        return ResponseEntity.ok(userService.updateUserRole(id, role));
+    }
+
+    // 3.5. Khóa tài khoản
     @PutMapping("/user/{id}/status")
     public ResponseEntity<?> changeStatus(
             @PathVariable Integer id,

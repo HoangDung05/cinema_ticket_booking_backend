@@ -24,4 +24,7 @@ public interface UserService {
 
     User updateUser(Integer id, User user);
 
+    /** Đổi role (CUSTOMER <-> ADMIN) */
+    User updateUserRole(Integer id, String roleName);
+
 }

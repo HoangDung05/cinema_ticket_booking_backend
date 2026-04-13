@@ -14,6 +14,10 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @EntityGraph(attributePaths = {"role"})
     Optional<User> findByEmail(String email);
 
+    // Eagerly load role for findAll
+    @EntityGraph(attributePaths = {"role"})
+    List<User> findAll();
+
     // Kiểm tra xem Email đã được đăng ký chưa
     boolean existsByEmail(String email);
 

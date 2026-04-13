@@ -5,9 +5,11 @@ import com.cinema.movie_booking.repository.RoomRepository;
 import com.cinema.movie_booking.repository.CinemaRepository;
 import com.cinema.movie_booking.service.RoomService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Transactional
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
