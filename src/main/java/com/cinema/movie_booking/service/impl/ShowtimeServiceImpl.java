@@ -2,6 +2,7 @@ package com.cinema.movie_booking.service.impl;
 
 import com.cinema.movie_booking.dto.SeatStatusDTO;
 import com.cinema.movie_booking.dto.ShowtimeDTO;
+import com.cinema.movie_booking.entity.Room;
 import com.cinema.movie_booking.entity.Seat;
 import com.cinema.movie_booking.entity.Showtime;
 import com.cinema.movie_booking.repository.BookingDetailRepository;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,7 +61,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
 
     // 3. Sơ đồ ghế: ghế nào đã đặt, ghế nào còn trống
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<SeatStatusDTO> getSeatsByShowtimeId(Integer showtimeId) {
         pendingBookingExpirationService.expireStalePendingBookings();
 
@@ -68,6 +70,9 @@ public class ShowtimeServiceImpl implements ShowtimeService {
 
         Integer roomId = showtime.getRoom().getId();
         List<Seat> allSeats = seatRepository.findByRoomId(roomId);
+        if (allSeats.isEmpty()) {
+            allSeats = seedDefaultSeats(showtime.getRoom());
+        }
 
         List<Integer> bookedSeatIds = bookingDetailRepository.findBookedSeatIdsByShowtimeId(showtimeId);
         Set<Integer> bookedSet = Set.copyOf(bookedSeatIds);
@@ -181,5 +186,21 @@ public class ShowtimeServiceImpl implements ShowtimeService {
         if (hasOverlap) {
             throw new RuntimeException("Khung giờ chiếu bị trùng với suất chiếu khác trong cùng phòng.");
         }
+    }
+
+    private List<Seat> seedDefaultSeats(Room room) {
+        char[] rows = {'A', 'B', 'C', 'D', 'E', 'F'};
+        List<Seat> seats = new ArrayList<>();
+
+        for (char row : rows) {
+            for (int col = 1; col <= 8; col++) {
+                Seat seat = new Seat();
+                seat.setRoom(room);
+                seat.setSeatNumber(row + String.valueOf(col));
+                seats.add(seat);
+            }
+        }
+
+        return seatRepository.saveAll(seats);
     }
 }

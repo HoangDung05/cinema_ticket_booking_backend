@@ -241,6 +241,7 @@ public class BookingServiceImpl implements BookingService {
                     cinemaName,
                     b.getShowtime().getStartTime(),
                     b.getTotalPrice(),
+                    b.getDiscountAmount(),
                     b.getStatus(),
                     String.join(", ", seatNames),
                     b.getCreatedAt()
