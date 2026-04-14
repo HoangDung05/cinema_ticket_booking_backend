@@ -8,6 +8,8 @@ import com.cinema.movie_booking.repository.RoleRepository;
 import com.cinema.movie_booking.repository.UserRepository;
 import com.cinema.movie_booking.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
@@ -98,17 +100,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User updateUser(Integer id, User userDetails) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy User ID: " + id));
-
-        // Chỉ cập nhật những trường cần thiết
-        user.setFullName(userDetails.getFullName());
-        user.setPhone(userDetails.getPhone());
-        user.setAvatarUrl(userDetails.getAvatarUrl());
-        // Không nên cho sửa email ở đây vì email là unique, nếu muốn sửa phải check
-        // trùng
-
-        return userRepository.save(user);
+        throw new RuntimeException("Admin chỉ được phép cập nhật phân quyền người dùng.");
     }
 
     @Override
@@ -119,6 +111,14 @@ public class UserServiceImpl implements UserService {
         String normalized = roleName == null ? "" : roleName.trim().toUpperCase();
         if (!normalized.equals("ADMIN") && !normalized.equals("CUSTOMER")) {
             throw new RuntimeException("Role không hợp lệ! Chỉ được dùng ADMIN hoặc CUSTOMER");
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentEmail = authentication != null ? authentication.getName() : null;
+        if ("CUSTOMER".equals(normalized)
+                && currentEmail != null
+                && currentEmail.equalsIgnoreCase(user.getEmail())) {
+            throw new RuntimeException("Bạn không thể tự hạ quyền tài khoản admin đang đăng nhập.");
         }
 
         Role role = roleRepository.findByName(normalized)
